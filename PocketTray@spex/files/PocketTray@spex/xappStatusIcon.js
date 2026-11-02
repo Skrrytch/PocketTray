@@ -13,31 +13,19 @@ const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
 const Gtk = imports.gi.Gtk;
 const GLib = imports.gi.GLib;
+const Gio = imports.gi.Gio;
 const XApp = imports.gi.XApp;
 const Main = imports.ui.main;
 const Tooltips = imports.ui.tooltips;
 
 const SNI_NAME = /^org\.freedesktop\.statusnotifieritem-(\d+)-\d+$/;
 
-// Stable, lower-case identifier for an XApp status icon proxy:
-//  - "org.x.StatusIcon.<name>" and plain names -> <name>
-//  - StatusNotifierItems without an id ("org.freedesktop.statusnotifieritem-
-//    <pid>-<n>") -> process name of <pid>, e.g. "teams-for-linux"
+// Lower-case identifier from the proxy name: "org.x.StatusIcon.<name>" and
+// plain names -> <name>. StatusNotifierItems without an id are named
+// "org.freedesktop.statusnotifieritem-<pid>-<n>"; for those the process name
+// is looked up asynchronously, see XAppStatusIcon._resolveProcessName().
 function getProxyId(proxy) {
-    let name = (proxy.name || "").replace(/^org\.x\.StatusIcon\./, "");
-    const m = name.match(SNI_NAME);
-    if (m) {
-        try {
-            const [ok, bytes] = GLib.file_get_contents("/proc/" + m[1] + "/comm");
-            if (ok) {
-                const comm = new TextDecoder().decode(bytes).trim();
-                if (comm) name = comm;
-            }
-        } catch (e) {
-            // process already gone: keep the raw name
-        }
-    }
-    return name.toLowerCase();
+    return (proxy.name || "").replace(/^org\.x\.StatusIcon\./, "").toLowerCase();
 }
 
 // Red dot while Cinnamon's screen recorder is running (part of xapp-status).
@@ -108,6 +96,8 @@ class XAppStatusIcon {
         this.id = getProxyId(proxy);
         // Anonymous StatusNotifierItem: id comes from the process name
         this.anonymous = SNI_NAME.test(proxy.name || "");
+        this._cancellable = new Gio.Cancellable();
+        this._resolveProcessName();
         this.iconName = null;
         this.icon_loader_handle = null;
 
@@ -156,10 +146,31 @@ class XAppStatusIcon {
             this.name = proxy.get_name();
             this.id = getProxyId(proxy);
             this.anonymous = SNI_NAME.test(proxy.name || "");
+            this._resolveProcessName();
             this.applet.onXAppIconChanged(this);
         }
         if ('PrimaryMenuIsOpen' in prop_names && !proxy.primary_menu_is_open) this.actor.sync_hover();
         if ('SecondaryMenuIsOpen' in prop_names && !proxy.secondary_menu_is_open) this.actor.sync_hover();
+    }
+
+    // For anonymous StatusNotifierItems read /proc/<pid>/comm without
+    // blocking, then let the applet re-sort the icon under its new id.
+    _resolveProcessName() {
+        const m = (this.proxy.name || "").match(SNI_NAME);
+        if (!m) return;
+
+        Gio.File.new_for_path("/proc/" + m[1] + "/comm").load_contents_async(this._cancellable, (file, res) => {
+            try {
+                const [ok, bytes] = file.load_contents_finish(res);
+                const comm = ok ? new TextDecoder().decode(bytes).trim().toLowerCase() : "";
+                if (comm && this.proxy && comm !== this.id) {
+                    this.id = comm;
+                    this.applet.onXAppIconChanged(this);
+                }
+            } catch (e) {
+                // cancelled or process already gone: keep the raw name
+            }
+        });
     }
 
     refresh() {
@@ -315,6 +326,7 @@ class XAppStatusIcon {
     }
 
     destroy() {
+        this._cancellable.cancel();
         if (this._proxy_prop_change_id) {
             this.proxy.disconnect(this._proxy_prop_change_id);
             this._proxy_prop_change_id = 0;

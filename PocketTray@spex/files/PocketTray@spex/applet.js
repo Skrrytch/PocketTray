@@ -21,6 +21,7 @@ const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
 const Gettext = imports.gettext;
 const AppletManager = imports.ui.appletManager;
+const Extension = imports.ui.extension;
 const Cinnamon = imports.gi.Cinnamon;
 const XApp = imports.gi.XApp;
 const XAppIcons = require('./xappStatusIcon');
@@ -52,10 +53,6 @@ const POCKET_ICONS = {
     "triangles-down": { directional: false, flipWhenOpen: false }
 };
 
-const APPLET_DIRS = [
-    GLib.get_home_dir() + "/.local/share/cinnamon/applets",
-    "/usr/share/cinnamon/applets"
-];
 
 const MENU_ICON_SIZE = 16;
 
@@ -106,6 +103,7 @@ class PocketTrayApplet extends Applet.Applet {
 
         this._signalManager = new SignalManager.SignalManager(null);
         this._scaleUpdateId = 0;
+        this._redisplayIdleId = 0;
         this._hoverOpenId = 0;
         this._hoverCloseId = 0;
 
@@ -130,7 +128,11 @@ class PocketTrayApplet extends Applet.Applet {
         this.settings.bind("pocket-position", "pocketPosition", () => this._updateTogglePosition());
 
         // Make the bundled SVGs available as themed (recolourable) icons.
-        Gtk.IconTheme.get_default().append_search_path(metadata.path + "/icons");
+        const iconTheme = Gtk.IconTheme.get_default();
+        const iconDir = metadata.path + "/icons";
+        if (!iconTheme.get_search_path().includes(iconDir)) {
+            iconTheme.append_search_path(iconDir);
+        }
 
         // --- Main box: icons that stay permanently visible ---------------
         this.button_box = new St.BoxLayout({ vertical: this._isVertical() });
@@ -299,12 +301,10 @@ class PocketTrayApplet extends Applet.Applet {
         try {
             if (iconName && iconName.trim()) {
                 if (iconName.includes("/")) {
-                    if (GLib.file_test(iconName, GLib.FileTest.EXISTS)) {
-                        return new St.Icon({
-                            gicon: new Gio.FileIcon({ file: Gio.File.new_for_path(iconName) }),
-                            icon_size: MENU_ICON_SIZE
-                        });
-                    }
+                    return new St.Icon({
+                        gicon: new Gio.FileIcon({ file: Gio.File.new_for_path(iconName) }),
+                        icon_size: MENU_ICON_SIZE
+                    });
                 } else {
                     return new St.Icon({
                         icon_name: iconName,
@@ -585,30 +585,27 @@ class PocketTrayApplet extends Applet.Applet {
     on_applet_removed_from_panel() {
         this._cancelHoverOpen();
         this._cancelHoverClose();
+        if (this._scaleUpdateId > 0) {
+            Mainloop.source_remove(this._scaleUpdateId);
+            this._scaleUpdateId = 0;
+        }
+        if (this._redisplayIdleId > 0) {
+            Mainloop.source_remove(this._redisplayIdleId);
+            this._redisplayIdleId = 0;
+        }
         this._signalManager.disconnectAllSignals();
         this.settings.finalize();
         this._clearIcons();
         this._stopXApp();
+        this.menu.destroy();
     }
 
     // ------------------------------------------------------------------
     // Conflict guard: only one applet may own the XEmbed tray icons
     // ------------------------------------------------------------------
-    _readMetadata(uuid) {
-        for (const dir of APPLET_DIRS) {
-            const path = dir + "/" + uuid + "/metadata.json";
-            try {
-                if (!GLib.file_test(path, GLib.FileTest.EXISTS)) continue;
-                const [ok, bytes] = GLib.file_get_contents(path);
-                if (ok) return JSON.parse(new TextDecoder().decode(bytes));
-            } catch (e) {
-                global.logWarning("PocketTray: cannot read " + path + ": " + e);
-            }
-        }
-        return null;
-    }
-
     // Returns [{ uuid, name }, ...] of other enabled tray applets, or null.
+    // Known tray applets are matched by UUID; any other applet counts once
+    // Cinnamon has loaded it and it declares "role": "tray". No file I/O.
     _findRivalTray() {
         const enabled = global.settings.get_strv("enabled-applets");
         const rivals = [];
@@ -616,7 +613,8 @@ class PocketTrayApplet extends Applet.Applet {
             const uuid = entry.split(":")[3];
             if (!uuid || uuid === this._uuid_ || rivals.some((r) => r.uuid === uuid)) continue;
 
-            const meta = this._readMetadata(uuid);
+            const ext = Extension.getExtension(uuid);
+            const meta = ext ? ext.meta : null;
             const roles = (meta && meta.role) ? meta.role.replace(/ /g, "").split(",") : [];
             if (KNOWN_TRAY_APPLETS.includes(uuid) || roles.includes("tray")) {
                 rivals.push({ uuid: uuid, name: (meta && meta.name) ? meta.name : uuid });
@@ -651,12 +649,13 @@ class PocketTrayApplet extends Applet.Applet {
         Main.warningNotify(
             _("PocketTray has been removed from the panel"),
             _("PocketTray replaces these applets, which already show tray icons: %s. Running them side by side shows icons twice and can crash Cinnamon. Remove them from the panel first, then add PocketTray again.")
-                .replace("%s", rivalNames),
+                .format(rivalNames),
             new St.Icon({ icon_name: "dialog-warning-symbolic", icon_type: St.IconType.SYMBOLIC, icon_size: 24 })
         );
 
         // Defer: never change enabled-applets while the applet manager is
-        // still busy adding or reacting to a change.
+        // still busy adding or reacting to a change. Not tracked on purpose:
+        // it removes this very instance, so it must outlive it.
         Mainloop.idle_add(() => {
             const id = String(this._instanceId);
             const list = global.settings.get_strv("enabled-applets").filter((entry) => {
@@ -719,7 +718,8 @@ class PocketTrayApplet extends Applet.Applet {
         // dispatcher does not re-emit existing icons on its own. Deferred so
         // that a tray applet removed in the same change has cleaned up first.
         global.trayReloading = false;
-        Mainloop.idle_add(() => {
+        this._redisplayIdleId = Mainloop.idle_add(() => {
+            this._redisplayIdleId = 0;
             if (!this._shuttingDown) {
                 Main.statusIconDispatcher.redisplay();
             }
@@ -871,7 +871,7 @@ class PocketTrayApplet extends Applet.Applet {
         const button = icon.get_parent();
 
         if (button == null) {
-            return GLib.SOURCE_REMOVE;
+            return Clutter.EVENT_PROPAGATE;
         }
 
         if (etype === Clutter.EventType.BUTTON_PRESS) {

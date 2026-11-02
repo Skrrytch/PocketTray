@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PocketTray@spex 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/issues\n"
-"POT-Creation-Date: 2026-11-02 19:58+0100\n"
+"POT-Creation-Date: 2026-11-02 20:07+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -24,11 +24,11 @@ msgstr ""
 msgid "No tray icons"
 msgstr ""
 
-#: applet.js:652
+#: applet.js:650
 msgid "PocketTray has been removed from the panel"
 msgstr ""
 
-#: applet.js:653
+#: applet.js:651
 #, javascript-format
 msgid ""
 "PocketTray replaces these applets, which already show tray icons: %s. "
