@@ -13,7 +13,7 @@
 // Owner interface (implemented by PocketTrayApplet):
 //   owner.panel, owner.orientation, owner.getPanelIconSize(), owner.isVertical()
 //   owner.panelBox, owner.pocket
-//   owner.placeIcon(actor, id, atStart) -> true if it went into the pocket
+//   owner.placeIcon(actor, id, options) -> true if it went into the pocket
 //   owner.iconsChanged()
 
 const Gtk = imports.gi.Gtk;
@@ -190,7 +190,7 @@ class XAppHost {
 
     _place(icon) {
         const parent = icon.actor.get_parent();
-        const toPocket = this._owner.placeIcon(icon.actor, icon.id, false);
+        const toPocket = this._owner.placeIcon(icon.actor, icon.id, { provisionalId: icon.idIsProvisional });
         if (icon.actor.get_parent() !== parent) {
             global.log("PocketTray: XApp icon '" + icon.id + "' -> " + (toPocket ? "pocket" : "panel"));
         }

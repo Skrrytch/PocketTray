@@ -51,6 +51,15 @@ class Pocket {
         return this._menu.isOpen;
     }
 
+    // Keyboard shortcut. Does nothing while the pocket is empty: its button
+    // is hidden then and the popup would have nothing to anchor to.
+    toggle() {
+        if (!this._button.actor.visible) return;
+        this._cancelHoverOpen();
+        this._cancelHoverClose();
+        this._menu.toggle();
+    }
+
     close() {
         this._cancelHoverOpen();
         this._cancelHoverClose();

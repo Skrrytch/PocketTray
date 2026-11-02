@@ -6,7 +6,8 @@
 // be switched in one go.
 //
 // The rows come from "icon sources" (XEmbedHost, XAppHost). Each source has
-// menuEntries() returning [{ id, label, makeIcon(size) }].
+// menuEntries() returning [{ id, label, makeIcon(size) }]. Below them, a
+// switch for "Put new icons into the pocket".
 
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
@@ -113,6 +114,11 @@ class IconMenuSection {
             item.connect("toggled", (it, inPanel) => this._hiddenList.setHidden(id, !inPanel));
             this._section.addMenuItem(item);
         }
+
+        this._section.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        const hideNew = new PopupMenu.PopupSwitchMenuItem(_("Put new icons into the pocket"), this._hiddenList.hideNew);
+        hideNew.connect("toggled", (it, on) => { this._hiddenList.hideNew = on; });
+        this._section.addMenuItem(hideNew);
         this._section.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
     }
 

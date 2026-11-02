@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: PocketTray@spex 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/"
 "issues\n"
-"POT-Creation-Date: 2026-11-02 20:38+0100\n"
+"POT-Creation-Date: 2026-11-02 21:16+0100\n"
 "PO-Revision-Date: 2026-11-02 20:00+0100\n"
 "Last-Translator: Bert Speckels <skrrytch@speckels.net>\n"
 "Language-Team: German\n"
@@ -17,13 +17,18 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/iconMenu.js:112
+#: lib/iconMenu.js:113
 msgid "Show in panel:"
 msgstr "In der Leiste zeigen:"
 
-#: lib/iconMenu.js:112
+#: lib/iconMenu.js:113
 msgid "No tray icons"
 msgstr "Keine Tray-Icons"
+
+#. settings-schema.json->hide-new-icons->description
+#: lib/iconMenu.js:122
+msgid "Put new icons into the pocket"
+msgstr "Neue Icons in die Tasche stecken"
 
 #: lib/rivalGuard.js:63
 msgid "PocketTray has been removed from the panel"
@@ -96,6 +101,14 @@ msgstr "Nur wirksam, wenn sich die Tasche beim Überfahren öffnet."
 msgid "Delay before closing after the mouse left"
 msgstr ""
 "Verzögerung vor dem Schließen, nachdem die Maus die Tasche verlassen hat"
+
+#. settings-schema.json->pocket-shortcut->description
+msgid "Keyboard shortcut to open the pocket"
+msgstr "Tastenkürzel zum Öffnen der Tasche"
+
+#. settings-schema.json->pocket-shortcut->tooltip
+msgid "Opens or closes the pocket while it holds icons."
+msgstr "Öffnet oder schließt die Tasche, solange sie Icons enthält."
 
 #. settings-schema.json->head-icon->description
 msgid "Pocket button"
@@ -176,6 +189,12 @@ msgstr ""
 #. settings-schema.json->head-list->description
 msgid "Hidden icons"
 msgstr "Versteckte Icons"
+
+#. settings-schema.json->hide-new-icons->tooltip
+msgid ""
+"Icons of applications PocketTray has not seen before go straight into the "
+"pocket. Icons it already knows keep their place."
+msgstr "Icons von Programmen, die PocketTray noch nicht kennt, landen direkt in der Tasche. Bekannte Icons behalten ihren Platz."
 
 #. settings-schema.json->hidden-apps->description
 msgid "Programs to move into the pocket"

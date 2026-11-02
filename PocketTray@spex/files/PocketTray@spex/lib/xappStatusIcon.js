@@ -155,6 +155,13 @@ class XAppStatusIcon {
         if ('SecondaryMenuIsOpen' in prop_names && !proxy.secondary_menu_is_open) this.actor.sync_hover();
     }
 
+    // True while the id of an unnamed StatusNotifierItem is still the raw
+    // "org.freedesktop.statusnotifieritem-<pid>-<n>" (process name not known
+    // yet, or the process is gone). Such ids change with every start.
+    get idIsProvisional() {
+        return this.anonymous && this.id === getProxyId(this.proxy);
+    }
+
     // For unnamed StatusNotifierItems read /proc/<pid>/comm without
     // blocking, then let the host re-sort the icon under its new id.
     _resolveProcessName() {

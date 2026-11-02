@@ -26,6 +26,7 @@
 const St = imports.gi.St;
 const GLib = imports.gi.GLib;
 const Applet = imports.ui.applet;
+const Main = imports.ui.main;
 const Settings = imports.ui.settings;
 const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
@@ -45,6 +46,8 @@ const RivalGuard = require('./lib/rivalGuard');
 
 // Value of the "pocket-position" setting that puts the button first.
 const BUTTON_BEFORE_ICONS = "left";
+// Name of the keyboard shortcut registered with Cinnamon.
+const SHORTCUT_NAME = "toggle-pocket";
 
 class PocketTrayApplet extends Applet.Applet {
     constructor(metadata, orientation, panelHeight, instanceId) {
@@ -60,6 +63,7 @@ class PocketTrayApplet extends Applet.Applet {
         this._uuid = metadata.uuid;
         this._instanceId = instanceId;
         this._retired = false;
+        this._shortcutActive = false;
         this._signals = new SignalManager.SignalManager(null);
         this._scaleUpdateId = 0;
 
@@ -81,8 +85,8 @@ class PocketTrayApplet extends Applet.Applet {
         this._iconMenu = new IconMenuSection(this._applet_context_menu, [this._xembed, this._xapp], this.hiddenList);
     }
 
-    // All settings except "hidden-apps" (see HiddenList) end up in
-    // this.config, which PocketButton and Pocket read from.
+    // Settings about the hidden icons are bound in HiddenList; all others end
+    // up in this.config, which PocketButton and Pocket read from.
     _bindSettings() {
         this.settings = new Settings.AppletSettings(this, this._uuid, this._instanceId);
         this.config = {};
@@ -95,6 +99,7 @@ class PocketTrayApplet extends Applet.Applet {
         bind("pocket-position", "pocketPosition", () => this._updateButtonPosition());
         bind("pocket-icon", "pocketIcon", () => this.pocketButton.update());
         bind("custom-icon", "customIcon", () => this.pocketButton.update());
+        bind("pocket-shortcut", "pocketShortcut", () => this._updateShortcut());
     }
 
     // ------------------------------------------------------------------
@@ -107,7 +112,13 @@ class PocketTrayApplet extends Applet.Applet {
     // Puts an icon actor into the pocket or the panel, depending on the
     // hidden list; moves it if it is in the wrong one. Returns true for the
     // pocket.
-    placeIcon(actor, id, atStart) {
+    // options.atStart:       insert as first icon instead of last
+    // options.provisionalId: the id is not final yet (see XAppStatusIcon);
+    //                        don't record it as a known icon
+    placeIcon(actor, id, { atStart = false, provisionalId = false } = {}) {
+        if (!provisionalId) {
+            this.hiddenList.noticeIcon(id);
+        }
         const toPocket = this.hiddenList.has(id);
         const target = toPocket ? this.pocket.box : this.panelBox;
         const parent = actor.get_parent();
@@ -141,6 +152,9 @@ class PocketTrayApplet extends Applet.Applet {
 
         this._xembed.start();
         this._xapp.start();
+
+        this._shortcutActive = true;
+        this._updateShortcut();
 
         this._signals.connect(global, "scale-changed", this._onUiScaleChanged, this);
         this._signals.connect(global.settings, "changed::panel-edit-mode", this.on_panel_edit_mode_changed, this);
@@ -195,6 +209,13 @@ class PocketTrayApplet extends Applet.Applet {
         this.actor.set_child_at_index(this.pocketButton.actor, index);
     }
 
+    // (Re-)registers the keyboard shortcut; an empty setting removes it.
+    _updateShortcut() {
+        if (!this._shortcutActive) return;   // not on the panel (yet), or retired
+        Main.keybindingManager.addXletHotKey(this, SHORTCUT_NAME, this.config.pocketShortcut,
+            () => this.pocket.toggle());
+    }
+
     _resizeIcons() {
         this.pocketButton.update();
         this._xapp.refresh();
@@ -241,6 +262,10 @@ class PocketTrayApplet extends Applet.Applet {
             this._scaleUpdateId = 0;
         }
         this._signals.disconnectAllSignals();
+        if (this._shortcutActive) {
+            Main.keybindingManager.removeXletHotKey(this, SHORTCUT_NAME);
+            this._shortcutActive = false;
+        }
         this.pocket.close();
         this._xembed.stop();
         this._xapp.stop();

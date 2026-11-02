@@ -33,6 +33,12 @@
         "description": "Delay before closing after the mouse left",
         "tooltip": "Only used when the pocket opens on hover."
     },
+    "pocket-shortcut": {
+        "type": "keybinding",
+        "default": "",
+        "description": "Keyboard shortcut to open the pocket",
+        "tooltip": "Opens or closes the pocket while it holds icons."
+    },
     "head-icon": {
         "type": "header",
         "description": "Pocket button"
@@ -76,6 +82,12 @@
         "type": "header",
         "description": "Hidden icons"
     },
+    "hide-new-icons": {
+        "type": "switch",
+        "default": false,
+        "description": "Put new icons into the pocket",
+        "tooltip": "Icons of applications PocketTray has not seen before go straight into the pocket. Icons it already knows keep their place."
+    },
     "hidden-apps": {
         "type": "list",
         "description": "Programs to move into the pocket",
@@ -88,6 +100,10 @@
                 "default": ""
             }
         ],
+        "default": []
+    },
+    "known-apps": {
+        "type": "generic",
         "default": []
     }
 }

@@ -9,7 +9,7 @@
 //
 // Owner interface (implemented by PocketTrayApplet):
 //   owner.actor, owner.orientation, owner.getPanelIconSize(), owner.pocket
-//   owner.placeIcon(actor, id, atStart) -> true if it went into the pocket
+//   owner.placeIcon(actor, id, options) -> true if it went into the pocket
 //   owner.iconsChanged()
 
 const St = imports.gi.St;
@@ -145,7 +145,7 @@ class XEmbedHost {
                 return GLib.SOURCE_REMOVE;
             });
 
-            const toPocket = this._owner.placeIcon(button, id, true);
+            const toPocket = this._owner.placeIcon(button, id, { atStart: true });
             global.log("PocketTray: X11 icon '" + id + "' -> " + (toPocket ? "pocket" : "panel"));
             this._owner.iconsChanged();
         } catch (e) {

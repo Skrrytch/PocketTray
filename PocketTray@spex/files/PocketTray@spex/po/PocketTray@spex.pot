@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PocketTray@spex 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/issues\n"
-"POT-Creation-Date: 2026-11-02 20:38+0100\n"
+"POT-Creation-Date: 2026-11-02 21:16+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,12 +16,17 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: lib/iconMenu.js:112
+#: lib/iconMenu.js:113
 msgid "Show in panel:"
 msgstr ""
 
-#: lib/iconMenu.js:112
+#: lib/iconMenu.js:113
 msgid "No tray icons"
+msgstr ""
+
+#. settings-schema.json->hide-new-icons->description
+#: lib/iconMenu.js:122
+msgid "Put new icons into the pocket"
 msgstr ""
 
 #: lib/rivalGuard.js:63
@@ -84,6 +89,14 @@ msgstr ""
 
 #. settings-schema.json->close-delay->description
 msgid "Delay before closing after the mouse left"
+msgstr ""
+
+#. settings-schema.json->pocket-shortcut->description
+msgid "Keyboard shortcut to open the pocket"
+msgstr ""
+
+#. settings-schema.json->pocket-shortcut->tooltip
+msgid "Opens or closes the pocket while it holds icons."
 msgstr ""
 
 #. settings-schema.json->head-icon->description
@@ -160,6 +173,12 @@ msgstr ""
 
 #. settings-schema.json->head-list->description
 msgid "Hidden icons"
+msgstr ""
+
+#. settings-schema.json->hide-new-icons->tooltip
+msgid ""
+"Icons of applications PocketTray has not seen before go straight into the "
+"pocket. Icons it already knows keep their place."
 msgstr ""
 
 #. settings-schema.json->hidden-apps->description

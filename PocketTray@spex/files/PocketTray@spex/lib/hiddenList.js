@@ -1,4 +1,9 @@
-// The list of tray icons that live in the pocket (setting "hidden-apps").
+// Which tray icons live in the pocket.
+//
+// Settings used:
+//   "hidden-apps"     the icons in the pocket
+//   "known-apps"      every icon id seen so far (no widget, type "generic")
+//   "hide-new-icons"  put icons that were never seen before into the pocket
 //
 // The settings widget is a one-column "list", so every entry is an object
 // { name: "<id>" }. Ids are compared case-insensitively and without
@@ -20,9 +25,28 @@ class HiddenList {
     constructor(settings, onChanged) {
         this._onChanged = onChanged;
         this._entries = [];
-        // Binds this._entries to the setting: reading gives the stored list,
-        // assigning a new array saves it.
+        this._known = [];
+        this.hideNew = false;
+        // Each bound property reads the stored value; assigning saves it.
         settings.bindWithObject(this, "hidden-apps", "_entries", () => this._onChanged());
+        settings.bindWithObject(this, "known-apps", "_known");
+        settings.bindWithObject(this, "hide-new-icons", "hideNew");
+    }
+
+    // Called for every icon placed in panel or pocket. Remembers ids seen for
+    // the first time; with "hide-new-icons" on, such an icon is put into the
+    // pocket right away. Doesn't call onChanged: the caller places the icon
+    // right after, and has(id) already reflects the change.
+    noticeIcon(id) {
+        const wanted = normalizeId(id);
+        const known = this._known || [];
+        if (!wanted || known.includes(wanted)) return;
+
+        this._known = known.concat([wanted]);   // saves the setting
+        if (this.hideNew && !this.has(wanted)) {
+            global.log("PocketTray: new icon '" + wanted + "' goes into the pocket");
+            this._entries = (this._entries || []).concat([{ name: wanted }]);
+        }
     }
 
     // Whether the icon with this id belongs into the pocket.
