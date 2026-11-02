@@ -59,6 +59,8 @@
             "Pocket": "pocket",
             "Three dots": "dots",
             "Grid": "grid",
+            "Four circles": "circles",
+            "Three triangles": "triangles",
             "Custom icon": "custom"
         }
     },

@@ -46,7 +46,9 @@ const POCKET_ICONS = {
     drawer: { directional: true,  flipWhenOpen: false },
     pocket: { directional: false, flipWhenOpen: false },
     dots:   { directional: false, flipWhenOpen: false },
-    grid:   { directional: false, flipWhenOpen: false }
+    grid:   { directional: false, flipWhenOpen: false },
+    circles:   { directional: false, flipWhenOpen: false },
+    triangles: { directional: false, flipWhenOpen: false }
 };
 
 const APPLET_DIRS = [
