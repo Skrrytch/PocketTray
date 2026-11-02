@@ -1,13 +1,60 @@
 # PocketTray
 
-Cinnamon applet: a system tray with a pocket for the tray icons you rarely
-need. Handles legacy X11 icons as well as modern XApp/StatusNotifier icons.
+**A system tray with a pocket for the icons you rarely need.**
 
-The applet lives in [`PocketTray@spex/`](PocketTray@spex/) in the layout used
-by [Cinnamon Spices](https://cinnamon-spices.linuxmint.com/); see its
-[README](PocketTray@spex/README.md) for usage and settings.
+Cinnamon's panel fills up with tray icons: updaters, screenshot tools, sync
+clients, chat apps. PocketTray keeps the ones you use every day in the panel
+and tucks the rest into a small pocket. One click (or a hover) opens it, and
+the icons inside behave exactly as they would in the panel.
+
+![PocketTray: the context menu with one switch per icon, and the panel with the pocket button](PocketTray@spex/screenshot.png)
+
+*Left: the pocket open above the panel. Right: the menu that decides which icon goes where, with one switch per icon.*
+
+## Features
+
+- **One applet for both tray systems.** Replaces Cinnamon's *System Tray* and
+  *XApp Status Applet*, and shows legacy X11 icons as well as modern
+  StatusNotifier and XApp icons (Electron, Qt, KDE, screen-recording indicator).
+- **Sorting with a switch.** Right-click PocketTray and switch each icon
+  between the panel and the pocket. Nothing else changes.
+- **Open on click or hover**, with a keyboard shortcut if you prefer.
+- **Readable pocket.** Icons only, icons with application names, or icons
+  with their current status text, so you can see at a glance what a program
+  is doing.
+- **New icons can go straight into the pocket**, so the panel stays clean
+  when you install a new program. Off by default.
+- **Changed icons can show up briefly in the panel** when a status icon
+  changes its picture or label, for example on a new message. Off by default.
+- **Available in German**, with English as the base language.
+
+## Installation
+
+PocketTray is meant to be installed from the
+[Cinnamon Spices](https://cinnamon-spices.linuxmint.com/) directory. Until it
+is listed there, install it by hand as described under
+[Development](#development).
+
+After installing:
+
+1. Remove *System Tray* and *XApp Status Applet* from the panel. If one of
+   them is still there, PocketTray removes itself and shows a notification
+   instead of displaying icons twice.
+2. Add *PocketTray* to the panel.
+3. Right-click it and switch the icons you want to keep out of the pocket.
+
+Usage details and all settings are described in the
+[applet README](PocketTray@spex/README.md).
+
+## Compatibility
+
+Developed and tested on Linux Mint 22.3 with Cinnamon 6.6.9 on a horizontal
+panel.
 
 ## Development
+
+The applet lives in [`PocketTray@spex/`](PocketTray@spex/), in the layout used
+by Cinnamon Spices. To run a development copy, link it into the applet directory:
 
 ```bash
 git clone https://github.com/Skrrytch/PocketTray.git
@@ -22,7 +69,7 @@ ln -s "$PWD/PocketTray/PocketTray@spex/files/PocketTray@spex" \
   template, `cinnamon-xlet-makepot -i PocketTray@spex/files/PocketTray@spex` installs the
   `.po` files locally
 
-### Code structure
+### Architecture
 
 All code is in `PocketTray@spex/files/PocketTray@spex/`:
 
@@ -54,3 +101,9 @@ run with the old modules. `require()` notices changed files (it caches by file
 size, so an edit that keeps the size unchanged needs a Cinnamon restart).
 `require()` is deprecated as of Cinnamon 6.8; switch to its replacement once
 that version can be tested.
+
+## Credits and license
+
+Based on `systray@cinnamon.org` and `xapp-status@cinnamon.org` from
+[linuxmint/cinnamon](https://github.com/linuxmint/cinnamon), licensed under
+GPL-2.0-or-later. PocketTray is distributed under the same license.

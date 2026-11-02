@@ -4,6 +4,8 @@ A system tray with a pocket. Tray icons you rarely need are tucked away in a
 small pocket that opens on click or hover; everything else stays visible in
 the panel.
 
+![The context menu with one switch per icon, and the panel with the pocket button](screenshot.png)
+
 PocketTray replaces both of Cinnamon's tray applets in one:
 
 - **System Tray** (`systray@cinnamon.org`) – legacy X11 (XEmbed) icons
