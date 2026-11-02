@@ -44,8 +44,12 @@ pocket according to the hidden list, `applet.iconsChanged()` shows or hides
 the pocket button. Each file starts with a comment describing its role and
 the interface it expects from its owner.
 
-Modules in `lib/` are loaded through Cinnamon's per-applet importer
-(`imports.ui.appletManager.applets["PocketTray@spex"].lib.<module>`), which
-works on Cinnamon 6.6 and later; top-level `var` and `function` declarations
-are exported. `require()`/`module.exports` are avoided, they are deprecated
-as of Cinnamon 6.8.
+Modules in `lib/` are loaded with Cinnamon's `require()`; paths are relative
+to the applet directory, also inside `lib/`, and each module lists its exports
+in `module.exports`. The classic per-applet importer
+(`imports.ui.appletManager.applets[uuid]`) is avoided on purpose: GJS keeps its
+modules until Cinnamon restarts, so after an update the new `applet.js` would
+run with the old modules. `require()` notices changed files (it caches by file
+size, so an edit that keeps the size unchanged needs a Cinnamon restart).
+`require()` is deprecated as of Cinnamon 6.8; switch to its replacement once
+that version can be tested.
