@@ -37,6 +37,16 @@
         "type": "header",
         "description": "Pocket button"
     },
+    "pocket-position": {
+        "type": "combobox",
+        "default": "right",
+        "description": "Position of the pocket button",
+        "tooltip": "On vertical panels, left means above and right means below the icons.",
+        "options": {
+            "Left of the icons": "left",
+            "Right of the icons": "right"
+        }
+    },
     "pocket-icon": {
         "type": "combobox",
         "default": "theme",
@@ -47,7 +57,6 @@
             "PocketTray arrow": "arrow",
             "Drawer": "drawer",
             "Pocket": "pocket",
-            "Jeans pocket": "jeans",
             "Three dots": "dots",
             "Grid": "grid",
             "Custom icon": "custom"

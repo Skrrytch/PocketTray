@@ -21,6 +21,7 @@ const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
 const Gettext = imports.gettext;
 const AppletManager = imports.ui.appletManager;
+const Cinnamon = imports.gi.Cinnamon;
 const XApp = imports.gi.XApp;
 const XAppIcons = require('./xappStatusIcon');
 
@@ -44,7 +45,6 @@ const POCKET_ICONS = {
     arrow:  { directional: true,  flipWhenOpen: true  },
     drawer: { directional: true,  flipWhenOpen: false },
     pocket: { directional: false, flipWhenOpen: false },
-    jeans:  { directional: false, flipWhenOpen: false },
     dots:   { directional: false, flipWhenOpen: false },
     grid:   { directional: false, flipWhenOpen: false }
 };
@@ -53,6 +53,32 @@ const APPLET_DIRS = [
     GLib.get_home_dir() + "/.local/share/cinnamon/applets",
     "/usr/share/cinnamon/applets"
 ];
+
+const MENU_ICON_SIZE = 16;
+
+// Context-menu row: [app icon] [name] .......... [switch]
+// Same behaviour as PopupSwitchMenuItem (keeps the menu open on toggle),
+// with an icon in front of the label.
+class IconSwitchMenuItem extends PopupMenu.PopupSwitchMenuItem {
+    _init(text, active, iconActor, params) {
+        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, params);
+
+        this.label = new St.Label({ text: text });
+        this._statusLabel = new St.Label({ text: '', style_class: 'popup-inactive-menu-item' });
+        this.actor.label_actor = this.label;
+        this._switch = new PopupMenu.Switch(active);
+
+        if (iconActor) {
+            this.addActor(iconActor, { span: 0 });
+        }
+        this.addActor(this.label);
+        this.addActor(this._statusLabel);
+
+        this._statusBin = new St.Bin({ x_align: St.Align.END });
+        this.addActor(this._statusBin, { expand: true, span: -1, align: St.Align.END });
+        this._statusBin.child = this._switch.actor;
+    }
+}
 
 class PocketTrayApplet extends Applet.Applet {
     constructor(metadata, orientation, panel_height, instance_id) {
@@ -97,6 +123,8 @@ class PocketTrayApplet extends Applet.Applet {
         this.customIcon = "";
         this.settings.bind("pocket-icon", "pocketIcon", () => this._updateToggleIcon());
         this.settings.bind("custom-icon", "customIcon", () => this._updateToggleIcon());
+        this.pocketPosition = "right";
+        this.settings.bind("pocket-position", "pocketPosition", () => this._updateTogglePosition());
 
         // Make the bundled SVGs available as themed (recolourable) icons.
         Gtk.IconTheme.get_default().append_search_path(metadata.path + "/icons");
@@ -125,6 +153,7 @@ class PocketTrayApplet extends Applet.Applet {
         this.pocket_toggle.connect('enter-event', () => this._onToggleEnter());
         this.pocket_toggle.connect('leave-event', () => this._onPocketLeave());
         this.actor.add_actor(this.pocket_toggle);
+        this._updateTogglePosition();
 
         // --- Pocket container: popup that holds the hidden icons ---------
         this.menuManager = new PopupMenu.PopupMenuManager(this);
@@ -173,6 +202,13 @@ class PocketTrayApplet extends Applet.Applet {
             case St.Side.LEFT:   return open ? "pan-start-symbolic" : "pan-end-symbolic";
             default:             return open ? "pan-end-symbolic"   : "pan-start-symbolic";
         }
+    }
+
+    // Pocket button before (left/top) or after (right/bottom) the icons.
+    _updateTogglePosition() {
+        if (!this.pocket_toggle) return;  // settings callback before construction finished
+        const index = this.pocketPosition === "left" ? 0 : this.actor.get_n_children() - 1;
+        this.actor.set_child_at_index(this.pocket_toggle, index);
     }
 
     // Rotation that turns an upward-pointing icon towards the pocket.
@@ -230,7 +266,11 @@ class PocketTrayApplet extends Applet.Applet {
         [this.button_box, this.pocket_box].forEach((box) => {
             box.get_children()
                 .filter((button) => button._pocketTrayXEmbed && button._pocketTrayId)
-                .forEach((button) => byId.set(button._pocketTrayId, button._pocketTrayId));
+                .forEach((button) => {
+                    const id = button._pocketTrayId;
+                    const wmClass = button._pocketTrayWmClass;
+                    byId.set(id, { label: id, makeIcon: () => this._makeAppIcon([wmClass, id]) });
+                });
         });
 
         for (const key in this._xappIcons) {
@@ -242,11 +282,54 @@ class PocketTrayApplet extends Applet.Applet {
             const tip = (icon.anonymous && icon.proxy && icon.proxy.tooltip_text || "")
                 .replace(/<[^>]*>/g, "").split(/\n|\\n/)[0].trim().slice(0, 40);
             const label = (tip && tip.toLowerCase() !== icon.id) ? tip + "  (" + icon.id + ")" : icon.id;
-            byId.set(icon.id, label);
+            const iconName = icon.proxy ? icon.proxy.icon_name : null;
+            byId.set(icon.id, { label: label, makeIcon: () => this._makeXAppMenuIcon(iconName, icon.id) });
         }
 
-        return [...byId].map(([id, label]) => ({ id, label }))
+        return [...byId].map(([id, entry]) => ({ id, label: entry.label, makeIcon: entry.makeIcon }))
             .sort((a, b) => GLib.utf8_collate(a.label.toLowerCase(), b.label.toLowerCase()));
+    }
+
+    // Icon the application itself reports (theme name or image file),
+    // falling back to its launcher icon.
+    _makeXAppMenuIcon(iconName, id) {
+        try {
+            if (iconName && iconName.trim()) {
+                if (iconName.includes("/")) {
+                    if (GLib.file_test(iconName, GLib.FileTest.EXISTS)) {
+                        return new St.Icon({
+                            gicon: new Gio.FileIcon({ file: Gio.File.new_for_path(iconName) }),
+                            icon_size: MENU_ICON_SIZE
+                        });
+                    }
+                } else {
+                    return new St.Icon({
+                        icon_name: iconName,
+                        icon_type: iconName.includes("symbolic") ? St.IconType.SYMBOLIC : St.IconType.FULLCOLOR,
+                        icon_size: MENU_ICON_SIZE
+                    });
+                }
+            }
+        } catch (e) {
+            global.logWarning("PocketTray: menu icon for '" + id + "': " + e);
+        }
+        return this._makeAppIcon([id]);
+    }
+
+    // Launcher (.desktop) icon of the first matching application, or a
+    // generic placeholder. Legacy XEmbed icons have no icon name of their own.
+    _makeAppIcon(candidates) {
+        const appSys = Cinnamon.AppSystem.get_default();
+        for (const name of candidates) {
+            if (!name) continue;
+            const app = appSys.lookup_desktop_wmclass(name) || appSys.lookup_app(name.toLowerCase() + ".desktop");
+            if (app) return app.create_icon_texture(MENU_ICON_SIZE);
+        }
+        return new St.Icon({
+            icon_name: "application-x-executable-symbolic",
+            icon_type: St.IconType.SYMBOLIC,
+            icon_size: MENU_ICON_SIZE
+        });
     }
 
     _buildIconsSection() {
@@ -256,9 +339,9 @@ class PocketTrayApplet extends Applet.Applet {
         this._iconsSection.addMenuItem(new PopupMenu.PopupMenuItem(
             icons.length ? _("Show in panel:") : _("No tray icons"), { reactive: false }));
 
-        for (const { id, label } of icons) {
+        for (const { id, label, makeIcon } of icons) {
             // Switch on = visible in the panel, off = tucked into the pocket.
-            const item = new PopupMenu.PopupSwitchMenuItem(label, !this._isHidden(id));
+            const item = new IconSwitchMenuItem(label, !this._isHidden(id), makeIcon());
             // PopupSwitchMenuItem keeps the menu open, so several icons can
             // be switched in one go.
             item.connect('toggled', (it, state) => this._setHidden(id, !state));
@@ -738,6 +821,7 @@ class PocketTrayApplet extends Applet.Applet {
             });
             button._pocketTrayXEmbed = true;
             button._pocketTrayId = String(role).toLowerCase().trim();
+            button._pocketTrayWmClass = icon.wm_class || role;
 
             icon.set_x_align(Clutter.ActorAlign.CENTER);
             icon.set_y_align(Clutter.ActorAlign.FILL);
