@@ -79,11 +79,11 @@
     "hidden-apps": {
         "type": "list",
         "description": "Programs to move into the pocket",
-        "tooltip": "Use the icon's role/WM_CLASS (case-insensitive), e.g. dropbox or steam. Open Looking Glass (Alt+F2, lg) > Log and look for 'PocketTray: icon role' to see the names.",
+        "tooltip": "Easier: right-click PocketTray and switch the icons on or off there. Names are matched case-insensitively: the name of the status icon, the process name for unnamed status icons, or the WM_CLASS of legacy tray icons.",
         "columns": [
             {
                 "id": "name",
-                "title": "Program (role / WM_CLASS)",
+                "title": "Program or icon name",
                 "type": "string",
                 "default": ""
             }
