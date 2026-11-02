@@ -35,7 +35,7 @@ function getProxyId(proxy) {
 }
 
 // Red dot while Cinnamon's screen recorder is running (part of xapp-status).
-class RecorderIcon {
+var RecorderIcon = class RecorderIcon {
     constructor(host) {
         this._host = host;
         this.actor = new St.BoxLayout({
@@ -92,9 +92,9 @@ class RecorderIcon {
         }
         this.actor.destroy();
     }
-}
+};
 
-class XAppStatusIcon {
+var XAppStatusIcon = class XAppStatusIcon {
     constructor(host, proxy) {
         this._host = host;
         this.proxy = proxy;
@@ -335,6 +335,4 @@ class XAppStatusIcon {
         this.actor.destroy();
         this.proxy = null;
     }
-}
-
-module.exports = { XAppStatusIcon, RecorderIcon };
+};

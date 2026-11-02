@@ -8,21 +8,23 @@
 // hidden list changed.
 //
 // Owner interface (implemented by PocketTrayApplet):
-//   owner.actor, owner.orientation, owner.getPanelIconSize()
+//   owner.actor, owner.orientation, owner.getPanelIconSize(), owner.pocket
 //   owner.placeIcon(actor, id, atStart) -> true if it went into the pocket
 //   owner.iconsChanged()
 
 const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
-const Meta = imports.gi.Meta;
 const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
-const { normalizeId } = require('./lib/hiddenList');
-const { makeAppIcon } = require('./lib/iconMenu');
+// Sibling modules are loaded through Cinnamon's per-applet importer, which
+// works on Cinnamon 6.6 and later; exported are top-level `var` and `function`.
+const Me = imports.ui.appletManager.applets["PocketTray@spex"];
+const { normalizeId } = Me.lib.hiddenList;
+const { makeAppIcon } = Me.lib.iconMenu;
 
-class XEmbedHost {
+var XEmbedHost = class XEmbedHost {
     constructor(owner) {
         this._owner = owner;
         this._signals = new SignalManager.SignalManager(null);
@@ -142,7 +144,7 @@ class XEmbedHost {
                 icon.visible = true;
                 icon.set_size(this._iconSize, this._iconSize);
                 icon.ease({ opacity: 255, duration: 400, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
-                icon.connect("event", (actor, event) => this._onIconEvent(actor, event));
+                this._connectIconEvents(icon, button);
                 return GLib.SOURCE_REMOVE;
             });
 
@@ -159,30 +161,29 @@ class XEmbedHost {
         this._removeIcon(icon);
     }
 
-    // Forwards pointer events to the embedded X window (from the stock
-    // systray): a modal grab around button presses lets the application
-    // open its own menu.
-    _onIconEvent(icon, event) {
-        const type = event.type();
-        const button = icon.get_parent();
-        if (button === null) {
-            return Clutter.EVENT_PROPAGATE;
-        }
-
-        if (type === Clutter.EventType.BUTTON_PRESS) {
-            global.begin_modal(Meta.ModalOptions.POINTER_ALREADY_GRABBED, event.time);
-        } else if (type === Clutter.EventType.ENTER) {
+    // Forwards pointer events to the embedded X window.
+    //
+    // While a mouse button is held, Cinnamon has the pointer grabbed, so the
+    // application could not open its menu. The stock systray works around
+    // this with a global modal grab; here the press is swallowed and sent to
+    // the application on release instead, when the grab is gone (as in
+    // collapsible-systray@feuerfuchs.eu). Inside the pocket, the pocket then
+    // closes so that its own modal grab doesn't block the menu either.
+    _connectIconEvents(icon, button) {
+        icon.connect("button-press-event", () => Clutter.EVENT_STOP);
+        icon.connect("button-release-event", (actor, event) => {
+            const result = icon.handle_event(Clutter.EventType.BUTTON_PRESS, event);
+            this._owner.pocket.closeIfContains(button);
+            return result;
+        });
+        icon.connect("enter-event", (actor, event) => {
             button.add_style_pseudo_class("hover");
-        } else if (type === Clutter.EventType.LEAVE) {
+            return icon.handle_event(Clutter.EventType.ENTER, event);
+        });
+        icon.connect("leave-event", (actor, event) => {
             button.remove_style_pseudo_class("hover");
-        }
-
-        const result = icon.handle_event(type, event);
-
-        if (type === Clutter.EventType.BUTTON_PRESS) {
-            global.end_modal(event.time);
-        }
-        return result;
+            return icon.handle_event(Clutter.EventType.LEAVE, event);
+        });
     }
 
     // ------------------------------------------------------------------
@@ -217,6 +218,4 @@ class XEmbedHost {
         }
         button.destroy();
     }
-}
-
-module.exports = { XEmbedHost };
+};

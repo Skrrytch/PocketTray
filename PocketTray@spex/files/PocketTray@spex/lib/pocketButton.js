@@ -6,10 +6,10 @@
 
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
-const Gtk = imports.gi.Gtk;
 
-// Bundled icons: icons/pockettray-<key>-symbolic.svg. Being "-symbolic", they
-// are recoloured like theme icons. All are drawn for a bottom panel, i.e.
+// Bundled icons: icons/pockettray-<key>-symbolic.svg. Cinnamon adds the
+// applet's icons/ directory to the icon theme, and being "-symbolic" they are
+// recoloured like theme icons. All are drawn for a bottom panel, i.e.
 // pointing up:
 //   directional:  rotated so that they point to where the pocket opens
 //   flipWhenOpen: additionally turned around while the pocket is open
@@ -28,16 +28,7 @@ const BUNDLED_ICONS = {
 const THEME_ARROW = "theme";    // arrow from the user's icon theme
 const CUSTOM_ICON = "custom";   // icon name or file from "custom-icon"
 
-// Makes the bundled SVGs available by icon name. Called once per applet
-// start; the search path is shared by the whole Cinnamon process.
-function addIconSearchPath(dir) {
-    const theme = Gtk.IconTheme.get_default();
-    if (!theme.get_search_path().includes(dir)) {
-        theme.append_search_path(dir);
-    }
-}
-
-class PocketButton {
+var PocketButton = class PocketButton {
     // applet: provides orientation and getPanelIconSize()
     // config: settings object with pocketIcon and customIcon
     constructor(applet, config) {
@@ -116,6 +107,4 @@ class PocketButton {
             default:            return 0;     // bottom panel: upwards
         }
     }
-}
-
-module.exports = { PocketButton, addIconSearchPath, THEME_ARROW, CUSTOM_ICON };
+};

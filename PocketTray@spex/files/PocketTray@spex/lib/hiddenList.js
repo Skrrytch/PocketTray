@@ -13,7 +13,7 @@ function normalizeId(id) {
     return String(id || "").trim().toLowerCase();
 }
 
-class HiddenList {
+var HiddenList = class HiddenList {
     // settings:  the applet's AppletSettings
     // onChanged: called after every change of the list, whether it was made
     //            in the settings dialog or through setHidden()
@@ -41,6 +41,4 @@ class HiddenList {
         this._entries = list;   // saves the setting
         this._onChanged();
     }
-}
-
-module.exports = { HiddenList, normalizeId };
+};
