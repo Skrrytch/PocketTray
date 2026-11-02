@@ -36,7 +36,6 @@ const KNOWN_TRAY_APPLETS = [
 const POCKET_ICONS = {
     arrow:  { directional: true,  flipWhenOpen: true  },
     drawer: { directional: true,  flipWhenOpen: false },
-    box:    { directional: true,  flipWhenOpen: false },
     pocket: { directional: false, flipWhenOpen: false },
     dots:   { directional: false, flipWhenOpen: false },
     grid:   { directional: false, flipWhenOpen: false }

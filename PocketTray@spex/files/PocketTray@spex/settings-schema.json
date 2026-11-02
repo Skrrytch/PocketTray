@@ -41,12 +41,11 @@
         "type": "combobox",
         "default": "theme",
         "description": "Icon of the pocket button",
-        "tooltip": "Arrows and boxes turn towards the side where the pocket opens.",
+        "tooltip": "Arrow and drawer turn towards the side where the pocket opens.",
         "options": {
             "Arrow from icon theme": "theme",
             "PocketTray arrow": "arrow",
             "Drawer": "drawer",
-            "Box with arrow": "box",
             "Pocket": "pocket",
             "Three dots": "dots",
             "Grid": "grid",
