@@ -122,7 +122,7 @@ class PocketTrayApplet extends Applet.Applet {
         this.settings.bind("open-trigger", "openTrigger");
         this.settings.bind("hover-delay", "hoverDelay");
         this.settings.bind("close-delay", "closeDelay");
-        this.pocketIcon = "theme";
+        this.pocketIcon = "triangles";
         this.customIcon = "";
         this.settings.bind("pocket-icon", "pocketIcon", () => this._updateToggleIcon());
         this.settings.bind("custom-icon", "customIcon", () => this._updateToggleIcon());
@@ -246,7 +246,7 @@ class PocketTrayApplet extends Applet.Applet {
             if (def.directional) angle = this._openDirectionAngle();
             if (def.flipWhenOpen && open) angle += 180;
         } else {
-            // "theme" (default) or custom without a file: theme arrow
+            // "theme" or custom without a file: theme arrow
             icon.set_icon_name(this._toggleIconName(open));
         }
 

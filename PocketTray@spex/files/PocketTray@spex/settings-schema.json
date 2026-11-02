@@ -49,10 +49,11 @@
     },
     "pocket-icon": {
         "type": "combobox",
-        "default": "theme",
+        "default": "triangles",
         "description": "Icon of the pocket button",
         "tooltip": "Arrow and drawer turn towards the side where the pocket opens.",
         "options": {
+            "Three triangles": "triangles",
             "Arrow from icon theme": "theme",
             "PocketTray arrow": "arrow",
             "Drawer": "drawer",
@@ -60,7 +61,6 @@
             "Three dots": "dots",
             "Grid": "grid",
             "Four circles": "circles",
-            "Three triangles": "triangles",
             "Three triangles (upside down)": "triangles-down",
             "Custom icon": "custom"
         }
