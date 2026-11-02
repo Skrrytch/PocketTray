@@ -32,6 +32,7 @@ The pocket button only appears when the pocket holds at least one icon.
 |---|---|
 | Open the pocket on | Click, Hover (with delays for opening and closing) |
 | Keyboard shortcut to open the pocket | Any shortcut; empty by default |
+| Pocket layout | Icons only, or icons with status text: one row per icon with the application's name and its current tooltip, so all states can be read at a glance (legacy X11 icons show their name only) |
 | Position of the pocket button | Left or right of the icons (above/below on vertical panels) |
 | Icon of the pocket button | Three triangles (default), triangles upside down, four circles, grid, three dots, pocket, drawer, arrows, or a custom icon |
 | Put new icons into the pocket | Icons of applications PocketTray has never seen go straight into the pocket; also in the context menu |

@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: PocketTray@spex 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/"
 "issues\n"
-"POT-Creation-Date: 2026-11-02 21:55+0100\n"
+"POT-Creation-Date: 2026-11-02 21:57+0100\n"
 "PO-Revision-Date: 2026-11-02 20:00+0100\n"
 "Last-Translator: Bert Speckels <skrrytch@speckels.net>\n"
 "Language-Team: German\n"
@@ -17,16 +17,16 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/iconMenu.js:110
+#: lib/iconMenu.js:65
 msgid "Show in panel:"
 msgstr "In der Leiste zeigen:"
 
-#: lib/iconMenu.js:110
+#: lib/iconMenu.js:65
 msgid "No tray icons"
 msgstr "Keine Tray-Icons"
 
 #. settings-schema.json->hide-new-icons->description
-#: lib/iconMenu.js:119
+#: lib/iconMenu.js:74
 msgid "Put new icons into the pocket"
 msgstr "Neue Icons in die Tasche stecken"
 
@@ -109,6 +109,25 @@ msgstr "Tastenkürzel zum Öffnen der Tasche"
 #. settings-schema.json->pocket-shortcut->tooltip
 msgid "Opens or closes the pocket while it holds icons."
 msgstr "Öffnet oder schließt die Tasche, solange sie Icons enthält."
+
+#. settings-schema.json->pocket-layout->description
+msgid "Pocket layout"
+msgstr "Darstellung der Tasche"
+
+#. settings-schema.json->pocket-layout->tooltip
+msgid ""
+"With status text, the pocket shows one row per icon with the application's "
+"name and its current tooltip, so all states can be read at a glance. Legacy "
+"X11 icons have no tooltip and show their name only."
+msgstr "Mit Statustext zeigt die Tasche eine Zeile pro Icon mit dem Namen des Programms und seinem aktuellen Tooltip, so lassen sich alle Zustände auf einen Blick ablesen. Alte X11-Icons haben keinen Tooltip und zeigen nur ihren Namen."
+
+#. settings-schema.json->pocket-layout->options
+msgid "Icons only"
+msgstr "Nur Icons"
+
+#. settings-schema.json->pocket-layout->options
+msgid "Icons with status text"
+msgstr "Icons mit Statustext"
 
 #. settings-schema.json->head-icon->description
 msgid "Pocket button"
@@ -226,7 +245,11 @@ msgid ""
 "When an application in the pocket changes its icon (for example a new "
 "message or a running backup), the icon appears in the panel for a while. "
 "Clicking it puts it back. Legacy X11 icons can't report changes."
-msgstr "Ändert ein Programm in der Tasche sein Icon (zum Beispiel bei einer neuen Nachricht oder einem laufenden Backup), erscheint das Icon eine Zeit lang in der Leiste. Ein Klick darauf legt es zurück. Alte X11-Icons können keine Änderungen melden."
+msgstr ""
+"Ändert ein Programm in der Tasche sein Icon (zum Beispiel bei einer neuen "
+"Nachricht oder einem laufenden Backup), erscheint das Icon eine Zeit lang in "
+"der Leiste. Ein Klick darauf legt es zurück. Alte X11-Icons können keine "
+"Änderungen melden."
 
 #. settings-schema.json->surface-duration->units
 msgid "s"

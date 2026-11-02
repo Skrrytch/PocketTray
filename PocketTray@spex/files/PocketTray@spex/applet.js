@@ -15,6 +15,7 @@
 //   lib/pocketButton.js the button in the panel and its icon
 //   lib/pocket.js       the popup holding the hidden icons, click/hover
 //   lib/iconMenu.js     context menu: one switch per icon
+//   lib/appInfo.js      launcher entry, name, icon and tooltip text of an app
 //   lib/rivalGuard.js   steps back when another tray applet is enabled
 //   lib/i18n.js         translations
 //
@@ -46,6 +47,8 @@ const RivalGuard = require('./lib/rivalGuard');
 
 // Value of the "pocket-position" setting that puts the button first.
 const BUTTON_BEFORE_ICONS = "left";
+// Value of the "pocket-layout" setting for rows with name and status text.
+const STATUS_LAYOUT = "status";
 // Name of the keyboard shortcut registered with Cinnamon.
 const SHORTCUT_NAME = "toggle-pocket";
 
@@ -78,6 +81,7 @@ class PocketTrayApplet extends Applet.Applet {
         this._updateButtonPosition();
 
         this.pocket = new Pocket(this, this.config, this.pocketButton);
+        this.pocket.setVertical(this._pocketVertical());
 
         this.hiddenList = new HiddenList(this.settings, () => this._onHiddenListChanged());
         this._xembed = new XEmbedHost(this);
@@ -104,6 +108,7 @@ class PocketTrayApplet extends Applet.Applet {
             if (!this.config.surfaceOnChange) this._xapp.endSurfacing();
         });
         bind("surface-duration", "surfaceDuration");
+        bind("pocket-layout", "pocketLayout", () => this._applyPocketLayout());
     }
 
     // ------------------------------------------------------------------
@@ -138,6 +143,12 @@ class PocketTrayApplet extends Applet.Applet {
             }
         }
         return toPocket;
+    }
+
+    // Whether an icon actor shows name and status text: only in the pocket,
+    // and only in the status layout.
+    showsStatus(actor) {
+        return this.config.pocketLayout === STATUS_LAYOUT && actor.get_parent() === this.pocket.box;
     }
 
     // Icons were added, removed, moved or hidden.
@@ -186,7 +197,7 @@ class PocketTrayApplet extends Applet.Applet {
     on_orientation_changed(orientation) {
         this.orientation = orientation;
         this.panelBox.set_vertical(this.isVertical());
-        this.pocket.setVertical(this.isVertical());
+        this.pocket.setVertical(this._pocketVertical());
         this.pocketButton.update();
         this._xembed.updateOrientation();
         this._xapp.refresh();
@@ -220,6 +231,17 @@ class PocketTrayApplet extends Applet.Applet {
         if (!this._shortcutActive) return;   // not on the panel (yet), or retired
         Main.keybindingManager.addXletHotKey(this, SHORTCUT_NAME, this.config.pocketShortcut,
             () => this.pocket.toggle());
+    }
+
+    // Status rows are stacked; plain icons follow the panel orientation.
+    _pocketVertical() {
+        return this.config.pocketLayout === STATUS_LAYOUT || this.isVertical();
+    }
+
+    _applyPocketLayout() {
+        this.pocket.setVertical(this._pocketVertical());
+        this._xapp.updateStatusDisplay();
+        this._xembed.redisplay();   // X11 rows are rebuilt with or without name
     }
 
     _resizeIcons() {

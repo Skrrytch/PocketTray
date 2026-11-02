@@ -10,7 +10,12 @@
 // Owner interface (implemented by PocketTrayApplet):
 //   owner.actor, owner.orientation, owner.getPanelIconSize(), owner.pocket
 //   owner.placeIcon(actor, id, options) -> true if it went into the pocket
+//   owner.showsStatus(actor) -> whether the actor needs its name shown
 //   owner.iconsChanged()
+//
+// Each icon sits in an St.Bin ("button"), which sits in a row together with
+// a name label; the label is only visible in the pocket's status layout.
+// Legacy icons have no tooltip, so they show their name only.
 
 const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
@@ -19,7 +24,7 @@ const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
 const { normalizeId } = require('./lib/hiddenList');
-const { makeAppIcon } = require('./lib/iconMenu');
+const { appName, makeAppIcon } = require('./lib/appInfo');
 
 class XEmbedHost {
     constructor(owner) {
@@ -27,7 +32,7 @@ class XEmbedHost {
         this._signals = new SignalManager.SignalManager(null);
         this._redisplayIdleId = 0;
         this._started = false;
-        // tray icon actor -> { button: St.Bin, id, wmClass }
+        // tray icon actor -> { row, button: St.Bin, nameLabel, id, wmClass }
         this._icons = new Map();
         this._iconSize = owner.getPanelIconSize(St.IconType.FULLCOLOR) * global.ui_scale;
     }
@@ -119,11 +124,23 @@ class XEmbedHost {
             }
 
             const id = normalizeId(role);
+            const wmClass = icon.wm_class || role;
             const button = new St.Bin({ style_class: "applet-box", child: icon });
             button.set_y_align(Clutter.ActorAlign.FILL);
             icon.set_x_align(Clutter.ActorAlign.CENTER);
             icon.set_y_align(Clutter.ActorAlign.FILL);
-            this._icons.set(icon, { button: button, id: id, wmClass: icon.wm_class || role });
+
+            const nameLabel = new St.Label({
+                text: appName([wmClass, id]) || id,
+                style: "font-weight: bold;",
+                y_align: Clutter.ActorAlign.CENTER,
+                visible: false
+            });
+            const row = new St.BoxLayout({ style: "spacing: 8px;" });
+            row.set_y_align(Clutter.ActorAlign.FILL);
+            row.add_actor(button);
+            row.add_actor(nameLabel);
+            this._icons.set(icon, { row, button, nameLabel, id, wmClass });
 
             // Like the stock systray: show the icon only after its X window
             // had time to settle, then fade it in.
@@ -141,11 +158,12 @@ class XEmbedHost {
                 icon.visible = true;
                 icon.set_size(this._iconSize, this._iconSize);
                 icon.ease({ opacity: 255, duration: 400, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
-                this._connectIconEvents(icon, button);
+                this._connectIconEvents(icon, button, row);
                 return GLib.SOURCE_REMOVE;
             });
 
-            const toPocket = this._owner.placeIcon(button, id, { atStart: true });
+            const toPocket = this._owner.placeIcon(row, id, { atStart: true });
+            nameLabel.visible = this._owner.showsStatus(row);
             global.log("PocketTray: X11 icon '" + id + "' -> " + (toPocket ? "pocket" : "panel"));
             this._owner.iconsChanged();
         } catch (e) {
@@ -166,11 +184,11 @@ class XEmbedHost {
     // the application on release instead, when the grab is gone (as in
     // collapsible-systray@feuerfuchs.eu). Inside the pocket, the pocket then
     // closes so that its own modal grab doesn't block the menu either.
-    _connectIconEvents(icon, button) {
+    _connectIconEvents(icon, button, row) {
         icon.connect("button-press-event", () => Clutter.EVENT_STOP);
         icon.connect("button-release-event", (actor, event) => {
             const result = icon.handle_event(Clutter.EventType.BUTTON_PRESS, event);
-            this._owner.pocket.closeIfContains(button);
+            this._owner.pocket.closeIfContains(row);
             return result;
         });
         icon.connect("enter-event", (actor, event) => {
@@ -190,30 +208,32 @@ class XEmbedHost {
         const entry = this._icons.get(icon);
         if (!entry) return;
         this._icons.delete(icon);
-        this._destroyButton(entry.button);
+        this._destroyEntry(entry);
         this._owner.iconsChanged();
     }
 
     _clear() {
-        for (const { button } of this._icons.values()) {
-            this._destroyButton(button);
+        for (const entry of this._icons.values()) {
+            this._destroyEntry(entry);
         }
         this._icons.clear();
         this._owner.iconsChanged();
     }
 
     // St.Bin asserts - and takes Cinnamon down - when it is destroyed while
-    // it still references a child. Always detach the icon first.
-    _destroyButton(button) {
-        if (!button || button.is_finalized()) return;
+    // it still references a child. Always detach the icon first, then
+    // destroy the row (and with it the empty button and the label).
+    _destroyEntry({ row, button }) {
         try {
-            if (button.get_child()) {
+            if (!button.is_finalized() && button.get_child()) {
                 button.set_child(null);
             }
         } catch (e) {
             global.logError("PocketTray: detaching icon failed: " + e);
         }
-        button.destroy();
+        if (!row.is_finalized()) {
+            row.destroy();
+        }
     }
 }
 

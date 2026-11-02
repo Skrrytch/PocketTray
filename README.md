@@ -36,6 +36,7 @@ All code is in `PocketTray@spex/files/PocketTray@spex/`:
 | `lib/pocketButton.js` | the pocket button and its icon |
 | `lib/pocket.js` | the popup holding the hidden icons, click and hover |
 | `lib/iconMenu.js` | context menu with one switch per icon |
+| `lib/appInfo.js` | launcher entry, display name, icon and tooltip text of an application |
 | `lib/rivalGuard.js` | steps back when another tray applet is enabled |
 | `lib/i18n.js` | translations |
 

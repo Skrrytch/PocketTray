@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PocketTray@spex 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/issues\n"
-"POT-Creation-Date: 2026-11-02 21:55+0100\n"
+"POT-Creation-Date: 2026-11-02 21:57+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,16 +16,16 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: lib/iconMenu.js:110
+#: lib/iconMenu.js:65
 msgid "Show in panel:"
 msgstr ""
 
-#: lib/iconMenu.js:110
+#: lib/iconMenu.js:65
 msgid "No tray icons"
 msgstr ""
 
 #. settings-schema.json->hide-new-icons->description
-#: lib/iconMenu.js:119
+#: lib/iconMenu.js:74
 msgid "Put new icons into the pocket"
 msgstr ""
 
@@ -97,6 +97,25 @@ msgstr ""
 
 #. settings-schema.json->pocket-shortcut->tooltip
 msgid "Opens or closes the pocket while it holds icons."
+msgstr ""
+
+#. settings-schema.json->pocket-layout->description
+msgid "Pocket layout"
+msgstr ""
+
+#. settings-schema.json->pocket-layout->tooltip
+msgid ""
+"With status text, the pocket shows one row per icon with the application's "
+"name and its current tooltip, so all states can be read at a glance. Legacy "
+"X11 icons have no tooltip and show their name only."
+msgstr ""
+
+#. settings-schema.json->pocket-layout->options
+msgid "Icons only"
+msgstr ""
+
+#. settings-schema.json->pocket-layout->options
+msgid "Icons with status text"
 msgstr ""
 
 #. settings-schema.json->head-icon->description

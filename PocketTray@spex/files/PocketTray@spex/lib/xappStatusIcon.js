@@ -11,9 +11,13 @@
 //    the pocket close, so its modal grab can't block the application's menu
 //  - a new picture or label is reported as activity, host.onIconActivity()
 //
+//  - in the pocket's status layout, a name and status text are shown next
+//    to the icon (setStatusVisible())
+//
 // Host interface (implemented by XAppHost):
 //   host.orientation, host.getPanelIconSize(type), host.isVertical()
 //   host.onIconChanged(icon), host.onIconActivated(icon), host.onIconActivity(icon)
+//   host.statusTexts(icon) -> { name, status }
 
 // Changes within this time after an icon appeared or was refreshed are not
 // reported as activity: setting the icon size makes some applications (and
@@ -129,6 +133,16 @@ class XAppStatusIcon {
         this.actor.add_actor(this.icon_holder);
         this.actor.add_actor(this.label);
 
+        // Name and status text for the pocket's status layout
+        this._showStatus = false;
+        this._textBox = new St.BoxLayout({ vertical: true, visible: false, y_align: Clutter.ActorAlign.CENTER });
+        this._nameLabel = new St.Label({ style: "font-weight: bold;" });
+        this._statusLabel = new St.Label();
+        this._statusLabel.opacity = 180;
+        this._textBox.add_actor(this._nameLabel);
+        this._textBox.add_actor(this._statusLabel);
+        this.actor.add_actor(this._textBox);
+
         this._tooltip = new Tooltips.PanelItemTooltip(this, "", host.orientation);
 
         this.actor.connect('button-press-event', (a, e) => this.onButtonPressEvent(a, e));
@@ -206,13 +220,33 @@ class XAppStatusIcon {
 
     setOrientation(orientation) {
         this._tooltip.orientation = orientation;
-        if (orientation === St.Side.LEFT || orientation === St.Side.RIGHT) {
+        if (this._showStatus) {
+            this.actor.vertical = false;   // a row: icon, then text
+        } else if (orientation === St.Side.LEFT || orientation === St.Side.RIGHT) {
             this.actor.vertical = true;
             this.actor.add_style_class_name("vertical");
         } else {
             this.actor.vertical = false;
             this.actor.remove_style_class_name("vertical");
         }
+    }
+
+    // Shows name and status text next to the icon (pocket status layout).
+    setStatusVisible(show) {
+        this._showStatus = show;
+        this._textBox.visible = show;
+        this.actor.style = show ? "spacing: 8px;" : null;
+        this.setOrientation(this._host.orientation);
+        if (show) {
+            this._updateStatusTexts();
+        }
+    }
+
+    _updateStatusTexts() {
+        const { name, status } = this._host.statusTexts(this);
+        this._nameLabel.set_text(name);
+        this._statusLabel.set_text(status);
+        this._statusLabel.visible = status.length > 0;
     }
 
     setIconName(iconName) {
@@ -258,6 +292,9 @@ class XAppStatusIcon {
             this._tooltip.preventShow = true;
         }
         this._tooltip.set_markup(tooltipText);
+        if (this._showStatus) {
+            this._updateStatusTexts();
+        }
         // Re-align a visible tooltip after its text length changed
         if (this._tooltip.visible) {
             this._tooltip.hide();

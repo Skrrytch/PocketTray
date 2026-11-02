@@ -39,6 +39,16 @@
         "description": "Keyboard shortcut to open the pocket",
         "tooltip": "Opens or closes the pocket while it holds icons."
     },
+    "pocket-layout": {
+        "type": "combobox",
+        "default": "icons",
+        "description": "Pocket layout",
+        "tooltip": "With status text, the pocket shows one row per icon with the application's name and its current tooltip, so all states can be read at a glance. Legacy X11 icons have no tooltip and show their name only.",
+        "options": {
+            "Icons only": "icons",
+            "Icons with status text": "status"
+        }
+    },
     "head-icon": {
         "type": "header",
         "description": "Pocket button"

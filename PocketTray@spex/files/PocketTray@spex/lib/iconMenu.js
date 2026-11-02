@@ -10,56 +10,11 @@
 // switch for "Put new icons into the pocket".
 
 const St = imports.gi.St;
-const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
-const Cinnamon = imports.gi.Cinnamon;
 const PopupMenu = imports.ui.popupMenu;
 const { _ } = require('./lib/i18n');
 
 const MENU_ICON_SIZE = 16;
-
-// --------------------------------------------------------------------------
-// Icon helpers, also used by the hosts for their menuEntries()
-// --------------------------------------------------------------------------
-
-// Launcher (.desktop) icon of the first application matching one of the
-// candidate names (WM_CLASS or id), or a generic placeholder.
-function makeAppIcon(candidates, size = MENU_ICON_SIZE) {
-    const appSys = Cinnamon.AppSystem.get_default();
-    for (const name of candidates) {
-        if (!name) continue;
-        const app = appSys.lookup_desktop_wmclass(name) || appSys.lookup_app(name.toLowerCase() + ".desktop");
-        if (app) return app.create_icon_texture(size);
-    }
-    return new St.Icon({
-        icon_name: "application-x-executable-symbolic",
-        icon_type: St.IconType.SYMBOLIC,
-        icon_size: size
-    });
-}
-
-// Icon from what an application reports: a theme icon name or an image
-// path. Falls back to makeAppIcon(fallbackCandidates).
-function makeIconFromName(iconName, fallbackCandidates, size = MENU_ICON_SIZE) {
-    if (iconName && iconName.trim()) {
-        if (iconName.includes("/")) {
-            return new St.Icon({
-                gicon: new Gio.FileIcon({ file: Gio.File.new_for_path(iconName) }),
-                icon_size: size
-            });
-        }
-        return new St.Icon({
-            icon_name: iconName,
-            icon_type: iconName.includes("symbolic") ? St.IconType.SYMBOLIC : St.IconType.FULLCOLOR,
-            icon_size: size
-        });
-    }
-    return makeAppIcon(fallbackCandidates, size);
-}
-
-// --------------------------------------------------------------------------
-// Menu
-// --------------------------------------------------------------------------
 
 // Row: [application icon] [name] ............ [switch]
 // Behaves like PopupSwitchMenuItem (toggling keeps the menu open); its
@@ -137,4 +92,4 @@ class IconMenuSection {
     }
 }
 
-module.exports = { IconMenuSection, makeAppIcon, makeIconFromName };
+module.exports = { IconMenuSection };

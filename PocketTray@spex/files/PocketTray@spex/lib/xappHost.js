@@ -20,6 +20,7 @@
 //   owner.panelBox, owner.pocket, owner.hiddenList
 //   owner.config.surfaceOnChange, owner.config.surfaceDuration
 //   owner.placeIcon(actor, id, options) -> true if it went into the pocket
+//   owner.showsStatus(actor) -> whether the actor needs its status texts
 //   owner.iconsChanged()
 
 const Gtk = imports.gi.Gtk;
@@ -29,7 +30,16 @@ const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
 const { XAppStatusIcon, RecorderIcon } = require('./lib/xappStatusIcon');
-const { makeIconFromName } = require('./lib/iconMenu');
+const { appName, makeIconFromName, tooltipLines } = require('./lib/appInfo');
+
+// Longer status texts are cut off in the pocket's status layout.
+const STATUS_MAX_CHARS = 60;
+
+// "Vorta" and "vorta", "OTP Scout" and "otp-scout" name the same thing.
+function _sameWord(a, b) {
+    const plain = (text) => text.toLowerCase().replace(/[\s_-]/g, "");
+    return plain(a) === plain(b);
+}
 
 // After a click on a surfaced icon it goes back into the pocket, slightly
 // delayed so the application can open its menu at the icon's position first.
@@ -145,6 +155,35 @@ class XAppHost {
     setReactive(reactive) {
         for (const icon of this._icons.values()) {
             icon.actor.reactive = reactive;
+        }
+    }
+
+    // Name and status line for the pocket's status layout: the launcher
+    // name (or, for unnamed StatusNotifierItems, the first tooltip line,
+    // which usually is the application's name) and the remaining tooltip.
+    statusTexts(icon) {
+        const lines = tooltipLines(icon.proxy ? icon.proxy.tooltip_text : "");
+        const first = lines.length > 0 ? lines[0] : "";
+        let name = appName([icon.id]);
+        if (!name && first && (icon.anonymous || _sameWord(first, icon.id))) {
+            name = first;   // e.g. "Microsoft Teams", or "Vorta" for "vorta"
+        }
+        name = name || icon.id;
+        // Drop a first tooltip line that only repeats the name
+        if (first && (_sameWord(first, name) || name.toLowerCase().includes(first.toLowerCase()))) {
+            lines.shift();
+        }
+        let status = lines.join(" · ");
+        if (status.length > STATUS_MAX_CHARS) {
+            status = status.slice(0, STATUS_MAX_CHARS - 1) + "…";
+        }
+        return { name, status };
+    }
+
+    // Pocket layout changed: show or hide the status texts.
+    updateStatusDisplay() {
+        for (const icon of this._icons.values()) {
+            icon.setStatusVisible(this._owner.showsStatus(icon.actor));
         }
     }
 
@@ -267,6 +306,7 @@ class XAppHost {
         if (icon.actor.get_parent() !== parent) {
             global.log("PocketTray: XApp icon '" + icon.id + "' -> " + (toPocket ? "pocket" : "panel"));
         }
+        icon.setStatusVisible(this._owner.showsStatus(icon.actor));
     }
 
     // Unnamed StatusNotifierItems are listed by process name; their first
@@ -274,9 +314,7 @@ class XAppHost {
     // icons keep their name: their tooltip often carries status text.
     _menuLabel(icon) {
         if (!icon.anonymous || !icon.proxy) return icon.id;
-        const tip = (icon.proxy.tooltip_text || "")
-            .replace(/<[^>]*>/g, "")         // strip markup
-            .split(/\n|\\n/)[0].trim().slice(0, 40);
+        const tip = (tooltipLines(icon.proxy.tooltip_text)[0] || "").slice(0, 40);
         return (tip && tip.toLowerCase() !== icon.id) ? tip + "  (" + icon.id + ")" : icon.id;
     }
 }
