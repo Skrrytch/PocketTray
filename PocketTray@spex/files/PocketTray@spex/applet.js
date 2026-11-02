@@ -1,7 +1,11 @@
-// PocketTray - based on systray@cinnamon.org (linuxmint/cinnamon, GPL-2.0+)
-// Milestone 1: XEmbed icons only. Icons whose role is on the "hidden-apps"
-// list go into a collapsible pocket instead of the main panel box.
-// TODO milestone 2: same split for XApp/SNI icons (xapp-status@cinnamon.org).
+// PocketTray - based on systray@cinnamon.org and xapp-status@cinnamon.org
+// (linuxmint/cinnamon, GPL-2.0+).
+// Hosts both kinds of tray icons:
+//  - XEmbed icons (legacy X11 tray), identified by their role / WM_CLASS
+//  - XApp status icons (incl. StatusNotifierItems bridged by xapp-sn-watcher),
+//    identified by their name or, for anonymous SNIs, their process name
+// Icons whose identifier is on the "hidden-apps" list go into a collapsible
+// pocket instead of the main panel box.
 
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
@@ -17,6 +21,8 @@ const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
 const Gettext = imports.gettext;
 const AppletManager = imports.ui.appletManager;
+const XApp = imports.gi.XApp;
+const XAppIcons = require('./xappStatusIcon');
 
 const UUID = "PocketTray@spex";
 Gettext.bindtextdomain(UUID, GLib.get_home_dir() + "/.local/share/locale");
@@ -24,11 +30,12 @@ function _(str) {
     return Gettext.dgettext(UUID, str);
 }
 
-// Applets that host the XEmbed tray but do not declare "role": "tray".
+// Applets that show tray icons but do not declare "role": "tray".
 // Applets that do declare the role are detected via their metadata.json.
 const KNOWN_TRAY_APPLETS = [
     "systray@cinnamon.org",
-    "collapsible-systray@feuerfuchs.eu"
+    "collapsible-systray@feuerfuchs.eu",
+    "xapp-status@cinnamon.org"
 ];
 // Bundled pocket icons (icons/pockettray-<key>-symbolic.svg). All of them
 // are drawn for a bottom panel; directional ones get rotated to point to
@@ -37,6 +44,7 @@ const POCKET_ICONS = {
     arrow:  { directional: true,  flipWhenOpen: true  },
     drawer: { directional: true,  flipWhenOpen: false },
     pocket: { directional: false, flipWhenOpen: false },
+    jeans:  { directional: false, flipWhenOpen: false },
     dots:   { directional: false, flipWhenOpen: false },
     grid:   { directional: false, flipWhenOpen: false }
 };
@@ -59,6 +67,13 @@ class PocketTrayApplet extends Applet.Applet {
         this._uuid_ = metadata.uuid;
         this._instanceId = instance_id;
         this._shuttingDown = false;
+
+        // XApp status icons: every proxy the monitor reports, and the icons
+        // we actually show (proxies claimed by a dedicated applet are left out)
+        this._monitor = null;
+        this._xappProxies = {};
+        this._xappIcons = {};
+        this._recorder = null;
 
         this._signalManager = new SignalManager.SignalManager(null);
         this._scaleUpdateId = 0;
@@ -129,6 +144,14 @@ class PocketTrayApplet extends Applet.Applet {
         let pocketItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, activate: false });
         pocketItem.addActor(this.pocket_box, { expand: true });
         this.menu.addMenuItem(pocketItem);
+
+        // --- Context menu: one switch per tray icon ("keep in pocket") ---
+        // Added before Cinnamon appends its own items (About, Configure...).
+        this._iconsSection = new PopupMenu.PopupMenuSection();
+        this._applet_context_menu.addMenuItem(this._iconsSection, 0);
+        this._applet_context_menu.connect('open-state-changed', (menu, open) => {
+            if (open) this._buildIconsSection();
+        });
     }
 
     // ------------------------------------------------------------------
@@ -136,6 +159,11 @@ class PocketTrayApplet extends Applet.Applet {
     // ------------------------------------------------------------------
     _isVertical() {
         return [St.Side.LEFT, St.Side.RIGHT].includes(this.orientation);
+    }
+
+    // used by xappStatusIcon.js
+    isVertical() {
+        return this._isVertical();
     }
 
     _toggleIconName(open) {
@@ -192,8 +220,66 @@ class PocketTrayApplet extends Applet.Applet {
             (entry) => entry && entry.name && entry.name.toLowerCase().trim() === r);
     }
 
+    // ------------------------------------------------------------------
+    // Context menu: pick icons for the pocket by clicking
+    // ------------------------------------------------------------------
+    // All icons PocketTray currently hosts, as [{ id, label }], sorted.
+    _collectIcons() {
+        const byId = new Map();
+
+        [this.button_box, this.pocket_box].forEach((box) => {
+            box.get_children()
+                .filter((button) => button._pocketTrayXEmbed && button._pocketTrayId)
+                .forEach((button) => byId.set(button._pocketTrayId, button._pocketTrayId));
+        });
+
+        for (const key in this._xappIcons) {
+            const icon = this._xappIcons[key];
+            if (!icon.id || byId.has(icon.id)) continue;
+            // Anonymous SNIs (id = process name): the first tooltip line is
+            // usually the application name. Named icons keep their name,
+            // their tooltip often carries changing status text.
+            const tip = (icon.anonymous && icon.proxy && icon.proxy.tooltip_text || "")
+                .replace(/<[^>]*>/g, "").split(/\n|\\n/)[0].trim().slice(0, 40);
+            const label = (tip && tip.toLowerCase() !== icon.id) ? tip + "  (" + icon.id + ")" : icon.id;
+            byId.set(icon.id, label);
+        }
+
+        return [...byId].map(([id, label]) => ({ id, label }))
+            .sort((a, b) => GLib.utf8_collate(a.label.toLowerCase(), b.label.toLowerCase()));
+    }
+
+    _buildIconsSection() {
+        this._iconsSection.removeAll();
+
+        const icons = this._collectIcons();
+        this._iconsSection.addMenuItem(new PopupMenu.PopupMenuItem(
+            icons.length ? _("Show in panel:") : _("No tray icons"), { reactive: false }));
+
+        for (const { id, label } of icons) {
+            // Switch on = visible in the panel, off = tucked into the pocket.
+            const item = new PopupMenu.PopupSwitchMenuItem(label, !this._isHidden(id));
+            // PopupSwitchMenuItem keeps the menu open, so several icons can
+            // be switched in one go.
+            item.connect('toggled', (it, state) => this._setHidden(id, !state));
+            this._iconsSection.addMenuItem(item);
+        }
+        this._iconsSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+    }
+
+    _setHidden(id, hidden) {
+        const list = (this.hiddenApps || []).filter(
+            (entry) => entry && entry.name && entry.name.toLowerCase().trim() !== id);
+        if (hidden) list.push({ name: id });
+
+        this.hiddenApps = list;
+        this.settings.setValue("hidden-apps", list);
+        this._onHiddenAppsChanged();
+    }
+
     _updatePocketToggle() {
-        const count = this.pocket_box.get_n_children();
+        // XApp icons can be invisible (proxy "Visible" = false)
+        const count = this.pocket_box.get_children().filter((c) => c.visible).length;
         this.pocket_toggle.visible = count > 0;
         if (count === 0 && this.menu.isOpen) {
             this.menu.close();
@@ -201,9 +287,138 @@ class PocketTrayApplet extends Applet.Applet {
     }
 
     _onHiddenAppsChanged() {
-        // Re-sort every icon: the dispatcher re-emits status-icon-added
-        // for each one, so _onTrayIconAdded picks the right container.
+        // XEmbed: the dispatcher re-emits status-icon-added for each icon,
+        // so _onTrayIconAdded picks the right container.
         Main.statusIconDispatcher.redisplay();
+        // XApp: just move the existing actors.
+        this._syncXAppIcons();
+    }
+
+    // ------------------------------------------------------------------
+    // XApp status icons
+    // ------------------------------------------------------------------
+    _startXApp() {
+        if (this._monitor) return;
+
+        this._recorder = new XAppIcons.RecorderIcon(this);
+        this.button_box.add_child(this._recorder.actor);
+
+        this._monitor = new XApp.StatusIconMonitor();
+        this._signalManager.connect(this._monitor, "icon-added", this._onXAppIconAdded, this);
+        this._signalManager.connect(this._monitor, "icon-removed", this._onXAppIconRemoved, this);
+        this._signalManager.connect(Gtk.IconTheme.get_default(), "changed", this._refreshXAppIcons, this);
+        // Like xapp-status: listen to the panel directly, the built-in
+        // on_panel_icon_size_changed() only fires for one icon type.
+        this._signalManager.connect(this.panel, "icon-size-changed", this._refreshXAppIcons, this);
+    }
+
+    _stopXApp() {
+        for (const key in this._xappIcons) {
+            this._xappIcons[key].destroy();
+        }
+        this._xappIcons = {};
+        this._xappProxies = {};
+        if (this._recorder) {
+            this._recorder.destroy();
+            this._recorder = null;
+        }
+        // Signals are disconnected by the caller via _signalManager.
+        this._monitor = null;
+        this._updatePocketToggle();
+    }
+
+    _xappKey(proxy) {
+        return proxy.get_name() + proxy.get_object_path();
+    }
+
+    _onXAppIconAdded(monitor, proxy) {
+        this._xappProxies[this._xappKey(proxy)] = proxy;
+        this._syncXAppIcons();
+    }
+
+    _onXAppIconRemoved(monitor, proxy) {
+        const key = this._xappKey(proxy);
+        delete this._xappProxies[key];
+        const icon = this._xappIcons[key];
+        if (icon) {
+            global.log("PocketTray: removing XApp icon '" + icon.id + "'");
+            delete this._xappIcons[key];
+            icon.destroy();
+        }
+        this._updatePocketToggle();
+    }
+
+    // A dedicated applet (e.g. network, sound) claimed this icon.
+    _isClaimedByApplet(proxy) {
+        return Main.systrayManager.getRoles().indexOf((proxy.name || "").toLowerCase()) !== -1;
+    }
+
+    // Create/destroy/move XApp icons so they match the proxies, the systray
+    // roles and the hidden-apps list.
+    _syncXAppIcons() {
+        if (!this._monitor) return;
+
+        for (const key in this._xappProxies) {
+            const proxy = this._xappProxies[key];
+            let icon = this._xappIcons[key];
+
+            if (this._isClaimedByApplet(proxy)) {
+                if (icon) {
+                    global.log("PocketTray: XApp icon '" + icon.id + "' claimed by an applet");
+                    delete this._xappIcons[key];
+                    icon.destroy();
+                }
+                continue;
+            }
+
+            if (!icon) {
+                icon = new XAppIcons.XAppStatusIcon(this, proxy);
+                this._xappIcons[key] = icon;
+            }
+            this._placeXAppIcon(icon);
+        }
+
+        // Keep the recording indicator at the end of the panel box
+        if (this._recorder) {
+            this.button_box.set_child_at_index(this._recorder.actor, -1);
+        }
+        this._updatePocketToggle();
+    }
+
+    _placeXAppIcon(icon) {
+        const toPocket = this._isHidden(icon.id);
+        const target = toPocket ? this.pocket_box : this.button_box;
+        const parent = icon.actor.get_parent();
+        if (parent === target) return;
+
+        global.log("PocketTray: XApp icon '" + icon.id + "' -> " + (toPocket ? "pocket" : "panel"));
+        if (parent) parent.remove_child(icon.actor);
+        target.add_child(icon.actor);
+    }
+
+    _refreshXAppIcons() {
+        for (const key in this._xappIcons) {
+            this._xappIcons[key].refresh();
+        }
+        if (this._recorder) this._recorder.refresh();
+    }
+
+    // Called by XAppStatusIcon when its name or visibility changed.
+    onXAppIconChanged(icon) {
+        if (this._xappIcons[this._xappKey(icon.proxy)] === icon) {
+            this._placeXAppIcon(icon);
+            this._updatePocketToggle();
+        }
+    }
+
+    // Called by XAppStatusIcon right before it forwards a click to its
+    // application: close the pocket so its modal grab cannot block the
+    // menu the application opens.
+    onXAppIconActivated(icon) {
+        if (this.menu.isOpen && icon.actor.get_parent() === this.pocket_box) {
+            this._cancelHoverClose();
+            this.menu.close(false);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -261,6 +476,7 @@ class PocketTrayApplet extends Applet.Applet {
         this.button_box.set_vertical(this._isVertical());
         this.pocket_box.set_vertical(this._isVertical());
         this._updateToggleIcon();
+        this._refreshXAppIcons();
         this.update_na_tray_orientation();
     }
 
@@ -286,6 +502,7 @@ class PocketTrayApplet extends Applet.Applet {
         this._signalManager.disconnectAllSignals();
         this.settings.finalize();
         this._clearIcons();
+        this._stopXApp();
     }
 
     // ------------------------------------------------------------------
@@ -305,20 +522,21 @@ class PocketTrayApplet extends Applet.Applet {
         return null;
     }
 
-    // Returns { uuid, name } of another enabled tray applet, or null.
+    // Returns [{ uuid, name }, ...] of other enabled tray applets, or null.
     _findRivalTray() {
         const enabled = global.settings.get_strv("enabled-applets");
+        const rivals = [];
         for (const entry of enabled) {
             const uuid = entry.split(":")[3];
-            if (!uuid || uuid === this._uuid_) continue;
+            if (!uuid || uuid === this._uuid_ || rivals.some((r) => r.uuid === uuid)) continue;
 
             const meta = this._readMetadata(uuid);
             const roles = (meta && meta.role) ? meta.role.replace(/ /g, "").split(",") : [];
             if (KNOWN_TRAY_APPLETS.includes(uuid) || roles.includes("tray")) {
-                return { uuid: uuid, name: (meta && meta.name) ? meta.name : uuid };
+                rivals.push({ uuid: uuid, name: (meta && meta.name) ? meta.name : uuid });
             }
         }
-        return null;
+        return rivals.length ? rivals : null;
     }
 
     _onEnabledAppletsChanged() {
@@ -328,25 +546,26 @@ class PocketTrayApplet extends Applet.Applet {
 
     // Hand the icons back, tell the user, and remove this instance from the
     // panel. The settings file is kept, so re-adding PocketTray restores them.
-    _shutdownBecauseOf(rival, wasRunning) {
-        const rivalName = rival.name;
+    _shutdownBecauseOf(rivals, wasRunning) {
         if (this._shuttingDown) return;
         this._shuttingDown = true;
 
-        global.logWarning("PocketTray: another tray applet is active (" + rivalName + "), shutting down");
+        const rivalNames = rivals.map((r) => "\"" + r.name + "\"").join(", ");
+        global.logWarning("PocketTray: other tray applets are active (" + rivalNames + "), shutting down");
 
         if (wasRunning) {
             this._signalManager.disconnectAllSignals();
             this._cancelHoverOpen();
             this._cancelHoverClose();
             this._clearIcons();
-            PocketTrayApplet._handOverIcons(rival.uuid);
+            this._stopXApp();
+            PocketTrayApplet._handOverIcons(rivals.map((r) => r.uuid));
         }
 
         Main.warningNotify(
             _("PocketTray has been removed from the panel"),
-            _("The applet \"%s\" already shows the tray icons. Two tray applets at the same time can crash Cinnamon. Remove \"%s\" from the panel first, then add PocketTray again.")
-                .replace(/%s/g, rivalName),
+            _("PocketTray replaces these applets, which already show tray icons: %s. Running them side by side shows icons twice and can crash Cinnamon. Remove them from the panel first, then add PocketTray again.")
+                .replace("%s", rivalNames),
             new St.Icon({ icon_name: "dialog-warning-symbolic", icon_type: St.IconType.SYMBOLIC, icon_size: 24 })
         );
 
@@ -366,15 +585,15 @@ class PocketTrayApplet extends Applet.Applet {
     // The rival applet is usually loaded *after* this change notification,
     // so wait until it runs, then re-emit all icons for it. Static on
     // purpose: this instance is gone by the time the timer fires.
-    static _handOverIcons(rivalUuid) {
+    static _handOverIcons(rivalUuids) {
         let tries = 0;
         Mainloop.timeout_add(250, () => {
             tries++;
             let running = false;
             try {
-                running = AppletManager.getRunningInstancesForUuid(rivalUuid).length > 0;
+                running = rivalUuids.every((uuid) => AppletManager.getRunningInstancesForUuid(uuid).length > 0);
             } catch (e) {
-                global.logWarning("PocketTray: cannot query " + rivalUuid + ": " + e);
+                global.logWarning("PocketTray: cannot query " + rivalUuids + ": " + e);
             }
             if (running || tries >= 20) {
                 Main.statusIconDispatcher.redisplay();
@@ -402,9 +621,12 @@ class PocketTrayApplet extends Applet.Applet {
         this._signalManager.connect(Main.statusIconDispatcher, 'status-icon-removed', this._onTrayIconRemoved, this);
         this._signalManager.connect(Main.statusIconDispatcher, 'before-redisplay', this._onBeforeRedisplay, this);
         this._signalManager.connect(Main.systrayManager, "changed", Main.statusIconDispatcher.redisplay, Main.statusIconDispatcher);
+        this._signalManager.connect(Main.systrayManager, "changed", this._syncXAppIcons, this);
         this._signalManager.connect(global, "scale-changed", this.uiScaleChanged, this);
         this._signalManager.connect(global.settings, 'changed::panel-edit-mode', this.on_panel_edit_mode_changed, this);
         this._signalManager.connect(global.settings, 'changed::enabled-applets', this._onEnabledAppletsChanged, this);
+
+        this._startXApp();
 
         // Always ask for the icons again. When PocketTray is added while the
         // tray manager already runs (e.g. replacing the stock systray), the
@@ -419,9 +641,12 @@ class PocketTrayApplet extends Applet.Applet {
         });
     }
 
+    // XEmbed buttons only; XApp icons and the recorder are managed separately.
     _clearIcons() {
         [this.button_box, this.pocket_box].forEach((box) => {
-            box.get_children().forEach((button) => this._destroyButton(button));
+            box.get_children()
+                .filter((button) => button._pocketTrayXEmbed)
+                .forEach((button) => this._destroyButton(button));
         });
         this._updatePocketToggle();
     }
@@ -451,6 +676,7 @@ class PocketTrayApplet extends Applet.Applet {
     resizeIcons() {
         this.icon_size = this.getPanelIconSize() * global.ui_scale;
         this._updateToggleIcon();
+        this._refreshXAppIcons();
         Main.statusIconDispatcher.redisplay();
     }
 
@@ -459,6 +685,10 @@ class PocketTrayApplet extends Applet.Applet {
     }
 
     on_panel_edit_mode_changed() {
+        const reactive = !global.settings.get_boolean('panel-edit-mode');
+        for (const key in this._xappIcons) {
+            this._xappIcons[key].actor.reactive = reactive;
+        }
         this.resizeIcons();
     }
 
@@ -506,6 +736,8 @@ class PocketTrayApplet extends Applet.Applet {
                 style_class: "applet-box",
                 child: icon
             });
+            button._pocketTrayXEmbed = true;
+            button._pocketTrayId = String(role).toLowerCase().trim();
 
             icon.set_x_align(Clutter.ActorAlign.CENTER);
             icon.set_y_align(Clutter.ActorAlign.FILL);

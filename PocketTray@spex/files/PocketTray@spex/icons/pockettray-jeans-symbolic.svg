@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Tasche mit Inhalt: Idee aus Bert Speckels' Entwurf (pocket.svg),
+       als gefüllte Flächen für kleine Leisten-Größen umgesetzt -->
+  <!-- Aus der Tasche schauende Inhalte -->
+  <circle cx="9.5" cy="5" r="2" fill="currentColor" />
+  <circle cx="16" cy="4" r="3" fill="currentColor" />
+  <circle cx="22.5" cy="5" r="2" fill="currentColor" />
+  <!-- Taschen-Umriss mit spitzer Unterkante, gleichmäßige Wandstärke -->
+  <path fill="currentColor" fill-rule="evenodd"
+        d="M 4 9 L 28 9 L 28 22 L 16 30 L 4 22 Z M 7 12 L 7 20.4 L 16 26.4 L 25 20.4 L 25 12 Z" />
+</svg>
