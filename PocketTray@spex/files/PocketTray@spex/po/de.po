@@ -4,10 +4,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PocketTray@spex 0.1.0\n"
-"Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/"
-"issues\n"
-"POT-Creation-Date: 2026-11-02 21:57+0100\n"
+"Project-Id-Version: PocketTray@spex 0.2.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-02 23:53+0100\n"
 "PO-Revision-Date: 2026-11-02 20:00+0100\n"
 "Last-Translator: Bert Speckels <skrrytch@speckels.net>\n"
 "Language-Team: German\n"
@@ -28,7 +27,7 @@ msgstr "Keine Tray-Icons"
 #. settings-schema.json->hide-new-icons->description
 #: lib/iconMenu.js:74
 msgid "Put new icons into the pocket"
-msgstr "Neue Icons in die Tasche stecken"
+msgstr "Neue Icons automatisch in die Tasche legen"
 
 #: lib/rivalGuard.js:60
 msgid "PocketTray has been removed from the panel"
@@ -59,9 +58,42 @@ msgstr ""
 "Tasche, die Leiste bleibt aufgeräumt. Funktioniert mit alten und modernen "
 "(XApp/StatusNotifier) Icons."
 
-#. settings-schema.json->head-general->description
-msgid "Pocket behaviour"
-msgstr "Verhalten der Tasche"
+#. settings-schema.json->page-pocket->title
+#. settings-schema.json->pocket-icon->options
+msgid "Pocket"
+msgstr "Tasche"
+
+#. settings-schema.json->page-button->title
+msgid "Pocket button"
+msgstr "Taschen-Button"
+
+#. settings-schema.json->page-icons->title
+msgid "Icons"
+msgstr "Icons"
+
+#. settings-schema.json->section-opening->title
+msgid "Opening"
+msgstr "Öffnen"
+
+#. settings-schema.json->section-appearance->title
+msgid "Appearance"
+msgstr "Darstellung"
+
+#. settings-schema.json->section-position-icon->title
+msgid "Position and icon"
+msgstr "Position und Icon"
+
+#. settings-schema.json->section-new-icons->title
+msgid "New icons"
+msgstr "Neue Icons"
+
+#. settings-schema.json->section-hidden-icons->title
+msgid "Hidden icons"
+msgstr "Versteckte Icons"
+
+#. settings-schema.json->section-surface->title
+msgid "Showing changed icons"
+msgstr "Bei Änderung zeigen"
 
 #. settings-schema.json->open-trigger->description
 msgid "Open the pocket on"
@@ -116,22 +148,22 @@ msgstr "Darstellung der Tasche"
 
 #. settings-schema.json->pocket-layout->tooltip
 msgid ""
-"With status text, the pocket shows one row per icon with the application's "
-"name and its current tooltip, so all states can be read at a glance. Legacy "
-"X11 icons have no tooltip and show their name only."
-msgstr "Mit Statustext zeigt die Tasche eine Zeile pro Icon mit dem Namen des Programms und seinem aktuellen Tooltip, so lassen sich alle Zustände auf einen Blick ablesen. Alte X11-Icons haben keinen Tooltip und zeigen nur ihren Namen."
+"Names shows the application name next to each icon. With status text, the "
+"name is followed by the current tooltip, so all states can be read at a "
+"glance. Legacy X11 icons have no tooltip."
+msgstr "Namen zeigt neben jedem Icon den Namen des Programms. Mit Statustext folgt auf den Namen der aktuelle Tooltip, so lassen sich alle Zustände auf einen Blick ablesen. Alte X11-Icons haben keinen Tooltip."
 
 #. settings-schema.json->pocket-layout->options
 msgid "Icons only"
 msgstr "Nur Icons"
 
 #. settings-schema.json->pocket-layout->options
-msgid "Icons with status text"
-msgstr "Icons mit Statustext"
+msgid "Icons and application name"
+msgstr "Icons und Anwendungsname"
 
-#. settings-schema.json->head-icon->description
-msgid "Pocket button"
-msgstr "Taschen-Button"
+#. settings-schema.json->pocket-layout->options
+msgid "Icons with status text (incl. name)"
+msgstr "Icons mit Statustext (inkl. Anwendungsname)"
 
 #. settings-schema.json->pocket-position->description
 msgid "Position of the pocket button"
@@ -177,10 +209,6 @@ msgid "Drawer"
 msgstr "Schublade"
 
 #. settings-schema.json->pocket-icon->options
-msgid "Pocket"
-msgstr "Tasche"
-
-#. settings-schema.json->pocket-icon->options
 msgid "Three dots"
 msgstr "Drei Punkte"
 
@@ -204,10 +232,6 @@ msgstr "Eigenes Icon"
 msgid "An icon name from your theme or an image file. Not rotated."
 msgstr ""
 "Ein Icon-Name aus deinem Thema oder eine Bilddatei. Wird nicht gedreht."
-
-#. settings-schema.json->head-list->description
-msgid "Hidden icons"
-msgstr "Versteckte Icons"
 
 #. settings-schema.json->hide-new-icons->tooltip
 msgid ""
@@ -237,8 +261,8 @@ msgid "Program or icon name"
 msgstr "Programm- oder Icon-Name"
 
 #. settings-schema.json->surface-on-change->description
-msgid "Show pocket icons in the panel while they change"
-msgstr "Icons aus der Tasche bei Änderungen in der Leiste zeigen"
+msgid "Briefly show changed pocket icons in the panel"
+msgstr "Geänderte Icons aus der Tasche kurz in der Leiste zeigen"
 
 #. settings-schema.json->surface-on-change->tooltip
 msgid ""
@@ -262,3 +286,41 @@ msgstr "So lange bleibt ein solches Icon in der Leiste"
 #. settings-schema.json->surface-duration->tooltip
 msgid "Every further change starts this time again."
 msgstr "Jede weitere Änderung startet diese Zeit neu."
+
+#~ msgid "Show the tooltip text in the status rows"
+#~ msgstr "Tooltip-Text in den Zeilen anzeigen"
+
+#~ msgid ""
+#~ "Off: the pocket shows plain icons in a row, without any text, as without "
+#~ "status text. The tooltip often holds changing status text, which some "
+#~ "people find distracting."
+#~ msgstr ""
+#~ "Aus: Die Tasche zeigt die Icons wie ohne Statustext als schlichte Reihe, "
+#~ "ohne jeden Text. Der Tooltip enthält oft wechselnden Statustext, der "
+#~ "stören kann."
+
+#~ msgid ""
+#~ "With status text, the pocket shows one row per icon with the "
+#~ "application's name and its current tooltip, so all states can be read at "
+#~ "a glance. Legacy X11 icons have no tooltip and show their name only."
+#~ msgstr ""
+#~ "Mit Statustext zeigt die Tasche eine Zeile pro Icon mit dem Namen des "
+#~ "Programms und seinem aktuellen Tooltip, so lassen sich alle Zustände auf "
+#~ "einen Blick ablesen. Alte X11-Icons haben keinen Tooltip und zeigen nur "
+#~ "ihren Namen."
+
+#~ msgid "Icons with status text"
+#~ msgstr "Icons mit Statustext"
+
+#~ msgid ""
+#~ "Off: each row shows only the name of the application. The tooltip often "
+#~ "holds changing status text, which some people find distracting."
+#~ msgstr ""
+#~ "Aus: Jede Zeile zeigt nur den Namen des Programms. Der Tooltip enthält "
+#~ "oft wechselnden Statustext, der stören kann."
+
+#~ msgid "Show pocket icons in the panel while they change"
+#~ msgstr "Icons aus der Tasche bei Änderungen in der Leiste zeigen"
+
+#~ msgid "Pocket behaviour"
+#~ msgstr "Verhalten der Tasche"

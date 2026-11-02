@@ -1,13 +1,14 @@
-# POCKETTRAY
-# This file is put in the public domain.
-# Bert Speckels, 2026
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PocketTray@spex 0.1.0\n"
-"Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/issues\n"
-"POT-Creation-Date: 2026-11-02 21:57+0100\n"
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-02 23:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -51,8 +52,41 @@ msgid ""
 " the panel tidy. Works with legacy and modern (XApp/StatusNotifier) icons."
 msgstr ""
 
-#. settings-schema.json->head-general->description
-msgid "Pocket behaviour"
+#. settings-schema.json->page-pocket->title
+#. settings-schema.json->pocket-icon->options
+msgid "Pocket"
+msgstr ""
+
+#. settings-schema.json->page-button->title
+msgid "Pocket button"
+msgstr ""
+
+#. settings-schema.json->page-icons->title
+msgid "Icons"
+msgstr ""
+
+#. settings-schema.json->section-opening->title
+msgid "Opening"
+msgstr ""
+
+#. settings-schema.json->section-appearance->title
+msgid "Appearance"
+msgstr ""
+
+#. settings-schema.json->section-position-icon->title
+msgid "Position and icon"
+msgstr ""
+
+#. settings-schema.json->section-new-icons->title
+msgid "New icons"
+msgstr ""
+
+#. settings-schema.json->section-hidden-icons->title
+msgid "Hidden icons"
+msgstr ""
+
+#. settings-schema.json->section-surface->title
+msgid "Showing changed icons"
 msgstr ""
 
 #. settings-schema.json->open-trigger->description
@@ -105,9 +139,9 @@ msgstr ""
 
 #. settings-schema.json->pocket-layout->tooltip
 msgid ""
-"With status text, the pocket shows one row per icon with the application's "
-"name and its current tooltip, so all states can be read at a glance. Legacy "
-"X11 icons have no tooltip and show their name only."
+"Names shows the application name next to each icon. With status text, the "
+"name is followed by the current tooltip, so all states can be read at a "
+"glance. Legacy X11 icons have no tooltip."
 msgstr ""
 
 #. settings-schema.json->pocket-layout->options
@@ -115,11 +149,11 @@ msgid "Icons only"
 msgstr ""
 
 #. settings-schema.json->pocket-layout->options
-msgid "Icons with status text"
+msgid "Icons and application name"
 msgstr ""
 
-#. settings-schema.json->head-icon->description
-msgid "Pocket button"
+#. settings-schema.json->pocket-layout->options
+msgid "Icons with status text (incl. name)"
 msgstr ""
 
 #. settings-schema.json->pocket-position->description
@@ -163,10 +197,6 @@ msgid "Drawer"
 msgstr ""
 
 #. settings-schema.json->pocket-icon->options
-msgid "Pocket"
-msgstr ""
-
-#. settings-schema.json->pocket-icon->options
 msgid "Three dots"
 msgstr ""
 
@@ -188,10 +218,6 @@ msgstr ""
 
 #. settings-schema.json->custom-icon->tooltip
 msgid "An icon name from your theme or an image file. Not rotated."
-msgstr ""
-
-#. settings-schema.json->head-list->description
-msgid "Hidden icons"
 msgstr ""
 
 #. settings-schema.json->hide-new-icons->tooltip
@@ -216,7 +242,7 @@ msgid "Program or icon name"
 msgstr ""
 
 #. settings-schema.json->surface-on-change->description
-msgid "Show pocket icons in the panel while they change"
+msgid "Briefly show changed pocket icons in the panel"
 msgstr ""
 
 #. settings-schema.json->surface-on-change->tooltip

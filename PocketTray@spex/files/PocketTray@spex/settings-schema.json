@@ -1,7 +1,52 @@
 {
-    "head-general": {
-        "type": "header",
-        "description": "Pocket behaviour"
+    "layout": {
+        "type": "layout",
+        "pages": ["page-pocket", "page-button", "page-icons"],
+        "page-pocket": {
+            "type": "page",
+            "title": "Pocket",
+            "sections": ["section-opening", "section-appearance"]
+        },
+        "page-button": {
+            "type": "page",
+            "title": "Pocket button",
+            "sections": ["section-position-icon"]
+        },
+        "page-icons": {
+            "type": "page",
+            "title": "Icons",
+            "sections": ["section-new-icons", "section-hidden-icons", "section-surface"]
+        },
+        "section-opening": {
+            "type": "section",
+            "title": "Opening",
+            "keys": ["open-trigger", "hover-delay", "close-delay", "pocket-shortcut"]
+        },
+        "section-appearance": {
+            "type": "section",
+            "title": "Appearance",
+            "keys": ["pocket-layout"]
+        },
+        "section-position-icon": {
+            "type": "section",
+            "title": "Position and icon",
+            "keys": ["pocket-position", "pocket-icon", "custom-icon"]
+        },
+        "section-new-icons": {
+            "type": "section",
+            "title": "New icons",
+            "keys": ["hide-new-icons"]
+        },
+        "section-hidden-icons": {
+            "type": "section",
+            "title": "Hidden icons",
+            "keys": ["hidden-apps"]
+        },
+        "section-surface": {
+            "type": "section",
+            "title": "Showing changed icons",
+            "keys": ["surface-on-change", "surface-duration"]
+        }
     },
     "open-trigger": {
         "type": "combobox",
@@ -43,15 +88,12 @@
         "type": "combobox",
         "default": "icons",
         "description": "Pocket layout",
-        "tooltip": "With status text, the pocket shows one row per icon with the application's name and its current tooltip, so all states can be read at a glance. Legacy X11 icons have no tooltip and show their name only.",
+        "tooltip": "Names shows the application name next to each icon. With status text, the name is followed by the current tooltip, so all states can be read at a glance. Legacy X11 icons have no tooltip.",
         "options": {
             "Icons only": "icons",
-            "Icons with status text": "status"
+            "Icons and application name": "names",
+            "Icons with status text (incl. name)": "status"
         }
-    },
-    "head-icon": {
-        "type": "header",
-        "description": "Pocket button"
     },
     "pocket-position": {
         "type": "combobox",
@@ -88,10 +130,6 @@
         "tooltip": "An icon name from your theme or an image file. Not rotated.",
         "dependency": "pocket-icon=custom"
     },
-    "head-list": {
-        "type": "header",
-        "description": "Hidden icons"
-    },
     "hide-new-icons": {
         "type": "switch",
         "default": false,
@@ -115,7 +153,7 @@
     "surface-on-change": {
         "type": "switch",
         "default": false,
-        "description": "Show pocket icons in the panel while they change",
+        "description": "Briefly show changed pocket icons in the panel",
         "tooltip": "When an application in the pocket changes its icon (for example a new message or a running backup), the icon appears in the panel for a while. Clicking it puts it back. Legacy X11 icons can't report changes."
     },
     "surface-duration": {

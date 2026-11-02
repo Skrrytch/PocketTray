@@ -20,7 +20,8 @@
 //   owner.panelBox, owner.pocket, owner.hiddenList
 //   owner.config.surfaceOnChange, owner.config.surfaceDuration
 //   owner.placeIcon(actor, id, options) -> true if it went into the pocket
-//   owner.showsStatus(actor) -> whether the actor needs its status texts
+//   owner.showsNames(actor) -> whether the actor is shown as a name row
+//   owner.statusSlotSize() -> width of the icon slot in name rows
 //   owner.iconsChanged()
 
 const Gtk = imports.gi.Gtk;
@@ -173,18 +174,22 @@ class XAppHost {
         if (first && (_sameWord(first, name) || name.toLowerCase().includes(first.toLowerCase()))) {
             lines.shift();
         }
-        let status = lines.join(" · ");
+        let status = this._owner.showsStatusText() ? lines.join(" · ") : "";
         if (status.length > STATUS_MAX_CHARS) {
             status = status.slice(0, STATUS_MAX_CHARS - 1) + "…";
         }
         return { name, status };
     }
 
-    // Pocket layout changed: show or hide the status texts.
-    updateStatusDisplay() {
+    // Pocket layout changed: show or hide the names and status texts.
+    updateNameRows() {
         for (const icon of this._icons.values()) {
-            icon.setStatusVisible(this._owner.showsStatus(icon.actor));
+            icon.setNameVisible(this._owner.showsNames(icon.actor));
         }
+    }
+
+    statusSlotSize() {
+        return this._owner.statusSlotSize();
     }
 
     // Entries for the context menu: [{ id, label, makeIcon }].
@@ -306,7 +311,7 @@ class XAppHost {
         if (icon.actor.get_parent() !== parent) {
             global.log("PocketTray: XApp icon '" + icon.id + "' -> " + (toPocket ? "pocket" : "panel"));
         }
-        icon.setStatusVisible(this._owner.showsStatus(icon.actor));
+        icon.setNameVisible(this._owner.showsNames(icon.actor));
     }
 
     // Unnamed StatusNotifierItems are listed by process name; their first

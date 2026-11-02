@@ -49,6 +49,10 @@ const RivalGuard = require('./lib/rivalGuard');
 const BUTTON_BEFORE_ICONS = "left";
 // Value of the "pocket-layout" setting for rows with name and status text.
 const STATUS_LAYOUT = "status";
+// Value of "pocket-layout" that shows application names next to the icons.
+const NAMES_LAYOUT = "names";
+// Free space next to each icon in the name rows, on top of the icon size.
+const NAME_ROW_ICON_PADDING = 8;
 // Name of the keyboard shortcut registered with Cinnamon.
 const SHORTCUT_NAME = "toggle-pocket";
 
@@ -145,10 +149,18 @@ class PocketTrayApplet extends Applet.Applet {
         return toPocket;
     }
 
-    // Whether an icon actor shows name and status text: only in the pocket,
-    // and only in the status layout.
-    showsStatus(actor) {
-        return this.config.pocketLayout === STATUS_LAYOUT && actor.get_parent() === this.pocket.box;
+    // Whether an icon actor is shown as a name row: only in the pocket, and
+    // only with a layout that has names.
+    showsNames(actor) {
+        return this._nameRows() && actor.get_parent() === this.pocket.box;
+    }
+
+    // Width of the icon slot in the name rows. One size for every icon type,
+    // so the names start in the same column.
+    statusSlotSize() {
+        const symbolic = this.getPanelIconSize(St.IconType.SYMBOLIC);
+        const fullColor = this.getPanelIconSize(St.IconType.FULLCOLOR);
+        return Math.max(symbolic, fullColor) + NAME_ROW_ICON_PADDING;
     }
 
     // Icons were added, removed, moved or hidden.
@@ -233,14 +245,25 @@ class PocketTrayApplet extends Applet.Applet {
             () => this.pocket.toggle());
     }
 
-    // Status rows are stacked; plain icons follow the panel orientation.
+    // Rows with application names (and optionally status text) are stacked;
+    // plain icons follow the panel orientation.
+    _nameRows() {
+        const layout = this.config.pocketLayout;
+        return layout === NAMES_LAYOUT || layout === STATUS_LAYOUT;
+    }
+
+    // Whether the rows also carry the tooltip text.
+    showsStatusText() {
+        return this.config.pocketLayout === STATUS_LAYOUT;
+    }
+
     _pocketVertical() {
-        return this.config.pocketLayout === STATUS_LAYOUT || this.isVertical();
+        return this._nameRows() || this.isVertical();
     }
 
     _applyPocketLayout() {
         this.pocket.setVertical(this._pocketVertical());
-        this._xapp.updateStatusDisplay();
+        this._xapp.updateNameRows();
         this._xembed.redisplay();   // X11 rows are rebuilt with or without name
     }
 

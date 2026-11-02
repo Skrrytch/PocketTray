@@ -10,11 +10,12 @@
 // Owner interface (implemented by PocketTrayApplet):
 //   owner.actor, owner.orientation, owner.getPanelIconSize(), owner.pocket
 //   owner.placeIcon(actor, id, options) -> true if it went into the pocket
-//   owner.showsStatus(actor) -> whether the actor needs its name shown
+//   owner.showsNames(actor) -> whether the actor is shown as a name row
+//   owner.statusSlotSize() -> width of the icon slot in name rows
 //   owner.iconsChanged()
 //
 // Each icon sits in an St.Bin ("button"), which sits in a row together with
-// a name label; the label is only visible in the pocket's status layout.
+// a name label; the label is only visible in the pocket's name rows.
 // Legacy icons have no tooltip, so they show their name only.
 
 const St = imports.gi.St;
@@ -105,6 +106,21 @@ class XEmbedHost {
         }));
     }
 
+    // Name rows: the button gets the same icon slot as the XApp rows, so the
+    // names start in one column. Other layouts keep the natural width.
+    _applyRowLayout(entry) {
+        const { row, button, nameLabel } = entry;
+        const show = this._owner.showsNames(row);
+        nameLabel.visible = show;
+        if (show) {
+            const padding = button.get_theme_node().get_horizontal_padding();
+            button.set_width(this._owner.statusSlotSize() + padding);
+            button.set_x_align(Clutter.ActorAlign.CENTER);
+        } else {
+            button.set_width(-1);
+        }
+    }
+
     // ------------------------------------------------------------------
     // Dispatcher callbacks
     // ------------------------------------------------------------------
@@ -163,7 +179,7 @@ class XEmbedHost {
             });
 
             const toPocket = this._owner.placeIcon(row, id, { atStart: true });
-            nameLabel.visible = this._owner.showsStatus(row);
+            this._applyRowLayout(this._icons.get(icon));
             global.log("PocketTray: X11 icon '" + id + "' -> " + (toPocket ? "pocket" : "panel"));
             this._owner.iconsChanged();
         } catch (e) {

@@ -12,7 +12,7 @@
 //  - a new picture or label is reported as activity, host.onIconActivity()
 //
 //  - in the pocket's status layout, a name and status text are shown next
-//    to the icon (setStatusVisible())
+//    to the icon (setNameVisible())
 //
 // Host interface (implemented by XAppHost):
 //   host.orientation, host.getPanelIconSize(type), host.isVertical()
@@ -133,15 +133,11 @@ class XAppStatusIcon {
         this.actor.add_actor(this.icon_holder);
         this.actor.add_actor(this.label);
 
-        // Name and status text for the pocket's status layout
-        this._showStatus = false;
-        this._textBox = new St.BoxLayout({ vertical: true, visible: false, y_align: Clutter.ActorAlign.CENTER });
-        this._nameLabel = new St.Label({ style: "font-weight: bold;" });
-        this._statusLabel = new St.Label();
-        this._statusLabel.opacity = 180;
-        this._textBox.add_actor(this._nameLabel);
-        this._textBox.add_actor(this._statusLabel);
-        this.actor.add_actor(this._textBox);
+        // Name and status text for the pocket's status layout: one line,
+        // "Name - status" (see _updateRowText)
+        this._showsNames = false;
+        this._rowLabel = new St.Label({ visible: false, y_align: Clutter.ActorAlign.CENTER });
+        this.actor.add_actor(this._rowLabel);
 
         this._tooltip = new Tooltips.PanelItemTooltip(this, "", host.orientation);
 
@@ -220,7 +216,7 @@ class XAppStatusIcon {
 
     setOrientation(orientation) {
         this._tooltip.orientation = orientation;
-        if (this._showStatus) {
+        if (this._showsNames) {
             this.actor.vertical = false;   // a row: icon, then text
         } else if (orientation === St.Side.LEFT || orientation === St.Side.RIGHT) {
             this.actor.vertical = true;
@@ -231,22 +227,40 @@ class XAppStatusIcon {
         }
     }
 
-    // Shows name and status text next to the icon (pocket status layout).
-    setStatusVisible(show) {
-        this._showStatus = show;
-        this._textBox.visible = show;
+    // Shows the name row (name, and status text in the status layout) next to
+    // the icon.
+    setNameVisible(show) {
+        this._showsNames = show;
+        this._rowLabel.visible = show;
         this.actor.style = show ? "spacing: 8px;" : null;
+        this._updateIconSlot();
         this.setOrientation(this._host.orientation);
+        if (this.proxy) this.setLabel(this.proxy.label);
         if (show) {
-            this._updateStatusTexts();
+            this._updateRowText();
         }
     }
 
-    _updateStatusTexts() {
+    // In the name rows the icon sits in a square slot of fixed size, so the
+    // text starts in the same column and row for every application.
+    _updateIconSlot() {
+        const slot = this._showsNames ? this._host.statusSlotSize() : -1;
+        this.icon_holder.set_width(slot);
+        this.icon_holder.set_height(slot);
+        this.icon_holder.set_x_align(Clutter.ActorAlign.CENTER);
+        this.icon_holder.set_y_align(Clutter.ActorAlign.CENTER);
+    }
+
+    // "Name - status" on one line, the name in bold. Markup is escaped so
+    // that texts from applications cannot inject formatting. The status part
+    // is empty outside the status layout (statusTexts() decides).
+    _updateRowText() {
         const { name, status } = this._host.statusTexts(this);
-        this._nameLabel.set_text(name);
-        this._statusLabel.set_text(status);
-        this._statusLabel.visible = status.length > 0;
+        let markup = "<b>" + GLib.markup_escape_text(name, -1) + "</b>";
+        if (status) {
+            markup += " - " + GLib.markup_escape_text(status, -1);
+        }
+        this._rowLabel.clutter_text.set_markup(markup);
     }
 
     setIconName(iconName) {
@@ -259,13 +273,15 @@ class XAppStatusIcon {
 
         this.iconSize = this._host.getPanelIconSize(type);
         this.proxy.icon_size = this.iconSize;
+        this._updateIconSlot();
 
         // Assume symbolic icons are always square/suitable for an StIcon.
         if (iconName.includes("/") && type !== St.IconType.SYMBOLIC) {
             this.icon_loader_handle = St.TextureCache.get_default().load_image_from_file_async(
                 iconName,
-                // Top/bottom panel: allow horizontal expansion, else keep square
-                this.actor.vertical ? this.iconSize : -1,
+                // Square for vertical panels and name rows (fixed slots); a
+                // horizontal panel lets wide images keep their width
+                this.actor.vertical || this._showsNames ? this.iconSize : -1,
                 this.iconSize,
                 (...args) => this._onImageLoaded(...args)
             );
@@ -292,8 +308,8 @@ class XAppStatusIcon {
             this._tooltip.preventShow = true;
         }
         this._tooltip.set_markup(tooltipText);
-        if (this._showStatus) {
-            this._updateStatusTexts();
+        if (this._showsNames) {
+            this._updateRowText();
         }
         // Re-align a visible tooltip after its text length changed
         if (this._tooltip.visible) {
@@ -304,7 +320,8 @@ class XAppStatusIcon {
 
     setLabel(label) {
         this.label.set_text(label || "");
-        this.label.visible = !this._host.isVertical() && !!label && label.length > 0;
+        // The status layout has its own text; the panel label would add a second one
+        this.label.visible = !this._showsNames && !this._host.isVertical() && !!label && label.length > 0;
     }
 
     setVisible(visible) {
