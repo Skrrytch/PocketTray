@@ -61,6 +61,7 @@
             "Grid": "grid",
             "Four circles": "circles",
             "Three triangles": "triangles",
+            "Three triangles (upside down)": "triangles-down",
             "Custom icon": "custom"
         }
     },

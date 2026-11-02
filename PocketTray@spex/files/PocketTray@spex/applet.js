@@ -48,7 +48,8 @@ const POCKET_ICONS = {
     dots:   { directional: false, flipWhenOpen: false },
     grid:   { directional: false, flipWhenOpen: false },
     circles:   { directional: false, flipWhenOpen: false },
-    triangles: { directional: false, flipWhenOpen: false }
+    triangles: { directional: false, flipWhenOpen: false },
+    "triangles-down": { directional: false, flipWhenOpen: false }
 };
 
 const APPLET_DIRS = [
