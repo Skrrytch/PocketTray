@@ -53,6 +53,9 @@ const STATUS_LAYOUT = "status";
 const NAMES_LAYOUT = "names";
 // Free space next to each icon in the name rows, on top of the icon size.
 const NAME_ROW_ICON_PADDING = 8;
+// Values of "pocket-order"; any other value keeps the order of appearance.
+const ORDER_BY_NAME = "name";
+const ORDER_BY_LIST = "list";
 // Name of the keyboard shortcut registered with Cinnamon.
 const SHORTCUT_NAME = "toggle-pocket";
 
@@ -73,6 +76,8 @@ class PocketTrayApplet extends Applet.Applet {
         this._shortcutActive = false;
         this._signals = new SignalManager.SignalManager(null);
         this._scaleUpdateId = 0;
+        // icon actor -> { id, name }, for sorting the pocket
+        this._iconInfo = new WeakMap();
 
         this._bindSettings();
 
@@ -113,6 +118,7 @@ class PocketTrayApplet extends Applet.Applet {
         });
         bind("surface-duration", "surfaceDuration");
         bind("pocket-layout", "pocketLayout", () => this._applyPocketLayout());
+        bind("pocket-order", "pocketOrder", () => this._sortPocket());
     }
 
     // ------------------------------------------------------------------
@@ -125,15 +131,17 @@ class PocketTrayApplet extends Applet.Applet {
     // Puts an icon actor into the pocket or the panel, depending on the
     // hidden list; moves it if it is in the wrong one. Returns true for the
     // pocket.
+    // options.name:          display name, used to sort the pocket
     // options.atStart:       insert as first icon instead of last
     // options.provisionalId: the id is not final yet (see XAppStatusIcon);
     //                        don't record it as a known icon
     // options.surfaced:      belongs into the pocket, but is shown in the
     //                        panel for a while because it changed (XAppHost)
-    placeIcon(actor, id, { atStart = false, provisionalId = false, surfaced = false } = {}) {
+    placeIcon(actor, id, { name = id, atStart = false, provisionalId = false, surfaced = false } = {}) {
         if (!provisionalId) {
             this.hiddenList.noticeIcon(id);
         }
+        this._iconInfo.set(actor, { id, name });
         const toPocket = this.hiddenList.has(id) && !surfaced;
         const target = toPocket ? this.pocket.box : this.panelBox;
         const parent = actor.get_parent();
@@ -146,6 +154,9 @@ class PocketTrayApplet extends Applet.Applet {
                 target.add_child(actor);
             }
         }
+        if (toPocket) {
+            this._sortPocket();   // also when only the name changed
+        }
         return toPocket;
     }
 
@@ -155,12 +166,13 @@ class PocketTrayApplet extends Applet.Applet {
         return this._nameRows() && actor.get_parent() === this.pocket.box;
     }
 
-    // Width of the icon slot in the name rows. One size for every icon type,
-    // so the names start in the same column.
+    // Width of the icon slot in the name rows, in physical pixels like all
+    // actor sizes (getPanelIconSize() is in logical pixels). One size for
+    // every icon type, so the names start in the same column.
     statusSlotSize() {
         const symbolic = this.getPanelIconSize(St.IconType.SYMBOLIC);
         const fullColor = this.getPanelIconSize(St.IconType.FULLCOLOR);
-        return Math.max(symbolic, fullColor) + NAME_ROW_ICON_PADDING;
+        return (Math.max(symbolic, fullColor) + NAME_ROW_ICON_PADDING) * global.ui_scale;
     }
 
     // Icons were added, removed, moved or hidden.
@@ -220,7 +232,9 @@ class PocketTrayApplet extends Applet.Applet {
     }
 
     on_panel_edit_mode_changed() {
-        this._xapp.setReactive(!global.settings.get_boolean("panel-edit-mode"));
+        const reactive = !global.settings.get_boolean("panel-edit-mode");
+        this._xapp.setReactive(reactive);
+        this._xembed.setReactive(reactive);
         this._resizeIcons();
     }
 
@@ -259,6 +273,28 @@ class PocketTrayApplet extends Applet.Applet {
 
     _pocketVertical() {
         return this._nameRows() || this.isVertical();
+    }
+
+    // Sorts the pocket by name or by the hidden-icons list, if chosen.
+    // Otherwise new icons keep their place: X11 icons in front, XApp icons
+    // behind (as the hosts insert them). Switching back to that order takes
+    // effect when the icons appear again, e.g. after a restart.
+    _sortPocket() {
+        const order = this.config.pocketOrder;
+        if (order !== ORDER_BY_NAME && order !== ORDER_BY_LIST) return;
+
+        const box = this.pocket.box;
+        const info = (actor) => this._iconInfo.get(actor) || { id: "", name: "" };
+        const byName = (a, b) => GLib.utf8_collate(info(a).name.toLowerCase(), info(b).name.toLowerCase());
+        const byList = (a, b) =>
+            this.hiddenList.position(info(a).id) - this.hiddenList.position(info(b).id) || byName(a, b);
+
+        const sorted = box.get_children().sort(order === ORDER_BY_LIST ? byList : byName);
+        sorted.forEach((actor, index) => {
+            if (box.get_child_at_index(index) !== actor) {
+                box.set_child_at_index(actor, index);
+            }
+        });
     }
 
     _applyPocketLayout() {

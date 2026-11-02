@@ -18,11 +18,12 @@ PocketTray replaces both of Cinnamon's tray applets in one:
    again and shows a notification, instead of showing icons twice.
 2. Add *PocketTray* to the panel.
 3. **Right-click PocketTray.** The menu lists every tray icon with its
-   application icon and a switch:
+   application icon, its name and a switch:
    - on – the icon stays in the panel
    - off – the icon goes into the pocket
-4. Click (or hover) the pocket button to open the pocket. Clicking a status
-   icon in the pocket closes the pocket, so the application's menu can open.
+4. Click (or hover) the pocket button to open the pocket. Clicking an icon
+   in the pocket - or its name, if names are shown - closes the pocket, so
+   the application's menu can open.
 
 The pocket button only appears when the pocket holds at least one icon.
 
@@ -30,14 +31,15 @@ The pocket button only appears when the pocket holds at least one icon.
 
 | Setting | Options |
 |---|---|
-| Open the pocket on | Click, Hover (with delays for opening and closing) |
+| Open the pocket on | Click, Hover (with delays for opening and closing, shown for Hover only) |
 | Keyboard shortcut to open the pocket | Any shortcut; empty by default |
-| Pocket layout | Icons only, or icons with status text: one row per icon with the application's name and its current tooltip, so all states can be read at a glance (legacy X11 icons show their name only) |
+| Pocket layout | Icons only; icons and application name; or icons with status text: one row per icon with the name and the current tooltip, so all states can be read at a glance (legacy X11 icons have no tooltip) |
+| Order of the icons in the pocket | Order of appearance, alphabetical, or the order of the hidden-icons list |
 | Position of the pocket button | Left or right of the icons (above/below on vertical panels) |
 | Icon of the pocket button | Three triangles (default), triangles upside down, four circles, grid, three dots, pocket, drawer, arrows, or a custom icon |
 | Put new icons into the pocket | Icons of applications PocketTray has never seen go straight into the pocket; also in the context menu |
 | Hidden icons | The list behind the switches in the context menu; can be edited by hand |
-| Show pocket icons in the panel while they change | Off by default. When a status icon in the pocket changes its picture or label (new message, running backup), it appears in the panel for a configurable time; a click puts it back. The hidden list is not changed. |
+| Briefly show changed pocket icons in the panel | Off by default. When a status icon in the pocket changes its picture or label (new message, running backup), it appears in the panel for a configurable time; a click puts it back. The hidden list is not changed. |
 
 ## How icons are identified
 

@@ -16,7 +16,9 @@
 //
 // Each icon sits in an St.Bin ("button"), which sits in a row together with
 // a name label; the label is only visible in the pocket's name rows.
-// Legacy icons have no tooltip, so they show their name only.
+// Legacy icons have no tooltip, so they show their name only. The row is
+// styled and clickable like an XApp icon (style class "applet-box"): same
+// hover, same text colour, and a click on the name acts on the icon.
 
 const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
@@ -25,7 +27,7 @@ const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
 const { normalizeId } = require('./lib/hiddenList');
-const { appName, makeAppIcon } = require('./lib/appInfo');
+const { appName, makeAppIcon, menuLabel } = require('./lib/appInfo');
 
 class XEmbedHost {
     constructor(owner) {
@@ -33,7 +35,7 @@ class XEmbedHost {
         this._signals = new SignalManager.SignalManager(null);
         this._redisplayIdleId = 0;
         this._started = false;
-        // tray icon actor -> { row, button: St.Bin, nameLabel, id, wmClass }
+        // tray icon actor -> { row, button: St.Bin, nameLabel, id, wmClass, name }
         this._icons = new Map();
         this._iconSize = owner.getPanelIconSize(St.IconType.FULLCOLOR) * global.ui_scale;
     }
@@ -90,6 +92,13 @@ class XEmbedHost {
         this.redisplay();
     }
 
+    // Rows must not react to clicks while the panel is being edited.
+    setReactive(reactive) {
+        for (const { row } of this._icons.values()) {
+            row.reactive = reactive;
+        }
+    }
+
     updateOrientation() {
         const vertical = [St.Side.LEFT, St.Side.RIGHT].includes(this._owner.orientation);
         Main.statusIconDispatcher.set_tray_orientation(
@@ -99,9 +108,9 @@ class XEmbedHost {
     // Entries for the context menu: [{ id, label, makeIcon }]. Legacy icons
     // carry no icon name, so the menu shows the application's launcher icon.
     menuEntries() {
-        return [...this._icons.values()].map(({ id, wmClass }) => ({
+        return [...this._icons.values()].map(({ id, wmClass, name }) => ({
             id: id,
-            label: id,
+            label: menuLabel(name, id),
             makeIcon: (size) => makeAppIcon([wmClass, id], size)
         }));
     }
@@ -112,13 +121,10 @@ class XEmbedHost {
         const { row, button, nameLabel } = entry;
         const show = this._owner.showsNames(row);
         nameLabel.visible = show;
-        if (show) {
-            const padding = button.get_theme_node().get_horizontal_padding();
-            button.set_width(this._owner.statusSlotSize() + padding);
-            button.set_x_align(Clutter.ActorAlign.CENTER);
-        } else {
-            button.set_width(-1);
-        }
+        const slot = show ? this._owner.statusSlotSize() : -1;
+        button.set_width(slot);
+        button.set_height(slot);
+        button.set_x_align(Clutter.ActorAlign.CENTER);
     }
 
     // ------------------------------------------------------------------
@@ -141,22 +147,28 @@ class XEmbedHost {
 
             const id = normalizeId(role);
             const wmClass = icon.wm_class || role;
-            const button = new St.Bin({ style_class: "applet-box", child: icon });
+            const name = appName([wmClass, id]) || id;
+            const button = new St.Bin({ child: icon });
             button.set_y_align(Clutter.ActorAlign.FILL);
             icon.set_x_align(Clutter.ActorAlign.CENTER);
             icon.set_y_align(Clutter.ActorAlign.FILL);
 
             const nameLabel = new St.Label({
-                text: appName([wmClass, id]) || id,
+                text: name,
                 style: "font-weight: bold;",
                 y_align: Clutter.ActorAlign.CENTER,
                 visible: false
             });
-            const row = new St.BoxLayout({ style: "spacing: 8px;" });
+            const row = new St.BoxLayout({
+                style_class: "applet-box",
+                style: "spacing: 8px;",
+                reactive: !global.settings.get_boolean("panel-edit-mode"),
+                track_hover: true
+            });
             row.set_y_align(Clutter.ActorAlign.FILL);
             row.add_actor(button);
             row.add_actor(nameLabel);
-            this._icons.set(icon, { row, button, nameLabel, id, wmClass });
+            this._icons.set(icon, { row, button, nameLabel, id, wmClass, name });
 
             // Like the stock systray: show the icon only after its X window
             // had time to settle, then fade it in.
@@ -174,11 +186,11 @@ class XEmbedHost {
                 icon.visible = true;
                 icon.set_size(this._iconSize, this._iconSize);
                 icon.ease({ opacity: 255, duration: 400, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
-                this._connectIconEvents(icon, button, row);
+                this._connectIconEvents(icon, row);
                 return GLib.SOURCE_REMOVE;
             });
 
-            const toPocket = this._owner.placeIcon(row, id, { atStart: true });
+            const toPocket = this._owner.placeIcon(row, id, { atStart: true, name });
             this._applyRowLayout(this._icons.get(icon));
             global.log("PocketTray: X11 icon '" + id + "' -> " + (toPocket ? "pocket" : "panel"));
             this._owner.iconsChanged();
@@ -200,21 +212,23 @@ class XEmbedHost {
     // the application on release instead, when the grab is gone (as in
     // collapsible-systray@feuerfuchs.eu). Inside the pocket, the pocket then
     // closes so that its own modal grab doesn't block the menu either.
-    _connectIconEvents(icon, button, row) {
-        icon.connect("button-press-event", () => Clutter.EVENT_STOP);
-        icon.connect("button-release-event", (actor, event) => {
-            const result = icon.handle_event(Clutter.EventType.BUTTON_PRESS, event);
+    //
+    // Clicks on the rest of the row (the name, the padding) are forwarded
+    // the same way; clicks on the icon itself stop there, so nothing is sent
+    // twice. Hover is shown by the row (track_hover).
+    _connectIconEvents(icon, row) {
+        const swallowPress = () => Clutter.EVENT_STOP;
+        const forwardClick = (actor, event) => {
+            icon.handle_event(Clutter.EventType.BUTTON_PRESS, event);
             this._owner.pocket.closeIfContains(row);
-            return result;
-        });
-        icon.connect("enter-event", (actor, event) => {
-            button.add_style_pseudo_class("hover");
-            return icon.handle_event(Clutter.EventType.ENTER, event);
-        });
-        icon.connect("leave-event", (actor, event) => {
-            button.remove_style_pseudo_class("hover");
-            return icon.handle_event(Clutter.EventType.LEAVE, event);
-        });
+            return Clutter.EVENT_STOP;
+        };
+        icon.connect("button-press-event", swallowPress);
+        icon.connect("button-release-event", forwardClick);
+        row.connect("button-press-event", swallowPress);
+        row.connect("button-release-event", forwardClick);
+        icon.connect("enter-event", (actor, event) => icon.handle_event(Clutter.EventType.ENTER, event));
+        icon.connect("leave-event", (actor, event) => icon.handle_event(Clutter.EventType.LEAVE, event));
     }
 
     // ------------------------------------------------------------------

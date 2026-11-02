@@ -31,16 +31,12 @@ const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
 const { XAppStatusIcon, RecorderIcon } = require('./lib/xappStatusIcon');
-const { appName, makeIconFromName, tooltipLines } = require('./lib/appInfo');
+const { appName, makeIconFromName, tooltipLines, sameName, menuLabel } = require('./lib/appInfo');
 
 // Longer status texts are cut off in the pocket's status layout.
 const STATUS_MAX_CHARS = 60;
-
-// "Vorta" and "vorta", "OTP Scout" and "otp-scout" name the same thing.
-function _sameWord(a, b) {
-    const plain = (text) => text.toLowerCase().replace(/[\s_-]/g, "");
-    return plain(a) === plain(b);
-}
+// Names taken from a tooltip line are cut off after this many characters.
+const NAME_MAX_CHARS = 40;
 
 // After a click on a surfaced icon it goes back into the pocket, slightly
 // delayed so the application can open its menu at the icon's position first.
@@ -159,20 +155,25 @@ class XAppHost {
         }
     }
 
-    // Name and status line for the pocket's status layout: the launcher
-    // name (or, for unnamed StatusNotifierItems, the first tooltip line,
-    // which usually is the application's name) and the remaining tooltip.
+    // Name of an icon in the pocket rows, the context menu and for sorting:
+    // the launcher name, or the first tooltip line for unnamed
+    // StatusNotifierItems (it usually is the application's name), else the id.
+    displayName(icon) {
+        return this._nameAndTooltip(icon).name;
+    }
+
+    // Name and status line for the pocket's name rows. The status line is
+    // the tooltip without what only repeats the name, and only in the status
+    // layout.
     statusTexts(icon) {
-        const lines = tooltipLines(icon.proxy ? icon.proxy.tooltip_text : "");
+        const { name, lines } = this._nameAndTooltip(icon);
         const first = lines.length > 0 ? lines[0] : "";
-        let name = appName([icon.id]);
-        if (!name && first && (icon.anonymous || _sameWord(first, icon.id))) {
-            name = first;   // e.g. "Microsoft Teams", or "Vorta" for "vorta"
-        }
-        name = name || icon.id;
-        // Drop a first tooltip line that only repeats the name
-        if (first && (_sameWord(first, name) || name.toLowerCase().includes(first.toLowerCase()))) {
-            lines.shift();
+        if (first && (sameName(first, name) || name.toLowerCase().includes(first.toLowerCase()))) {
+            lines.shift();   // "Vorta" for Vorta
+        } else if (first.toLowerCase().startsWith(name.toLowerCase())) {
+            // "Mumble — 1.5.517" for Mumble: keep "1.5.517"
+            const rest = first.slice(name.length).replace(/^[\s\-–—:·|]+/, "");
+            if (rest) lines[0] = rest; else lines.shift();
         }
         let status = this._owner.showsStatusText() ? lines.join(" · ") : "";
         if (status.length > STATUS_MAX_CHARS) {
@@ -200,7 +201,7 @@ class XAppHost {
             const iconName = icon.proxy ? icon.proxy.icon_name : null;
             entries.push({
                 id: icon.id,
-                label: this._menuLabel(icon),
+                label: menuLabel(this.displayName(icon), icon.id),
                 makeIcon: (size) => makeIconFromName(iconName, [icon.id], size)
             });
         }
@@ -305,6 +306,7 @@ class XAppHost {
     _place(icon) {
         const parent = icon.actor.get_parent();
         const toPocket = this._owner.placeIcon(icon.actor, icon.id, {
+            name: this.displayName(icon),
             provisionalId: icon.idIsProvisional,
             surfaced: this._surfaced.has(this._key(icon.proxy))
         });
@@ -314,13 +316,15 @@ class XAppHost {
         icon.setNameVisible(this._owner.showsNames(icon.actor));
     }
 
-    // Unnamed StatusNotifierItems are listed by process name; their first
-    // tooltip line is usually the application's name, so show both. Named
-    // icons keep their name: their tooltip often carries status text.
-    _menuLabel(icon) {
-        if (!icon.anonymous || !icon.proxy) return icon.id;
-        const tip = (tooltipLines(icon.proxy.tooltip_text)[0] || "").slice(0, 40);
-        return (tip && tip.toLowerCase() !== icon.id) ? tip + "  (" + icon.id + ")" : icon.id;
+    // See displayName(). The tooltip lines are returned for statusTexts().
+    _nameAndTooltip(icon) {
+        const lines = tooltipLines(icon.proxy ? icon.proxy.tooltip_text : "");
+        const first = lines.length > 0 ? lines[0] : "";
+        let name = appName([icon.id]);
+        if (!name && first && (icon.anonymous || sameName(first, icon.id))) {
+            name = first.slice(0, NAME_MAX_CHARS);   // e.g. "Microsoft Teams"
+        }
+        return { name: name || icon.id, lines };
     }
 }
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-02 23:53+0100\n"
+"POT-Creation-Date: 2026-11-03 00:12+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -116,11 +116,6 @@ msgstr ""
 msgid "Hover delay before opening"
 msgstr ""
 
-#. settings-schema.json->hover-delay->tooltip
-#. settings-schema.json->close-delay->tooltip
-msgid "Only used when the pocket opens on hover."
-msgstr ""
-
 #. settings-schema.json->close-delay->description
 msgid "Delay before closing after the mouse left"
 msgstr ""
@@ -139,9 +134,9 @@ msgstr ""
 
 #. settings-schema.json->pocket-layout->tooltip
 msgid ""
-"Names shows the application name next to each icon. With status text, the "
-"name is followed by the current tooltip, so all states can be read at a "
-"glance. Legacy X11 icons have no tooltip."
+"With names, the pocket shows one row per icon with the application name. "
+"With status text, the current tooltip follows the name, so all states can be"
+" read at a glance. Legacy X11 icons have no tooltip."
 msgstr ""
 
 #. settings-schema.json->pocket-layout->options
@@ -154,6 +149,28 @@ msgstr ""
 
 #. settings-schema.json->pocket-layout->options
 msgid "Icons with status text (incl. name)"
+msgstr ""
+
+#. settings-schema.json->pocket-order->description
+msgid "Order of the icons in the pocket"
+msgstr ""
+
+#. settings-schema.json->pocket-order->tooltip
+msgid ""
+"Alphabetical sorts by application name. List order follows the list of "
+"hidden icons on the Icons tab."
+msgstr ""
+
+#. settings-schema.json->pocket-order->options
+msgid "Order of appearance"
+msgstr ""
+
+#. settings-schema.json->pocket-order->options
+msgid "Alphabetical"
+msgstr ""
+
+#. settings-schema.json->pocket-order->options
+msgid "List order"
 msgstr ""
 
 #. settings-schema.json->pocket-position->description

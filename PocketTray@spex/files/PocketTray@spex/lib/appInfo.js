@@ -12,14 +12,55 @@ const Cinnamon = imports.gi.Cinnamon;
 
 const DEFAULT_ICON_SIZE = 16;
 
+// Shortest name searched for in all launchers; shorter ones match too much.
+const MIN_SEARCH_LENGTH = 3;
+// Only the best-ranked groups of search results are considered.
+const SEARCH_GROUPS = 2;
+
+// Lower case, letters and digits only: "Proton Mail Bridge",
+// "protonmail-bridge" and "protonmail_bridge" all become "protonmailbridge".
+function plainName(text) {
+    return String(text || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Whether two names mean the same, e.g. "Vorta" and "vorta", "OTP Scout"
+// and "otp-scout".
+function sameName(a, b) {
+    return plainName(a) === plainName(b);
+}
+
 // Launcher entry of the first application matching one of the candidate
-// names (WM_CLASS, id), or null.
+// names (WM_CLASS, id), or null. Exact lookups come first; then a search
+// through all launchers, e.g. "mumble" -> info.mumble.Mumble.desktop. A
+// search hit only counts if its file or application name contains the
+// candidate, so "process-monitor" doesn't end at an unrelated system monitor.
 function findApp(candidates) {
     const appSys = Cinnamon.AppSystem.get_default();
-    for (const name of candidates) {
-        if (!name) continue;
+    const names = candidates.filter((name) => !!name);
+    for (const name of names) {
         const app = appSys.lookup_desktop_wmclass(name) || appSys.lookup_app(name.toLowerCase() + ".desktop");
         if (app) return app;
+    }
+    for (const name of names) {
+        const app = _searchApp(appSys, name);
+        if (app) return app;
+    }
+    return null;
+}
+
+function _searchApp(appSys, name) {
+    const wanted = plainName(name);
+    if (wanted.length < MIN_SEARCH_LENGTH) return null;
+
+    for (const group of Gio.DesktopAppInfo.search(name).slice(0, SEARCH_GROUPS)) {
+        for (const desktopId of group) {
+            const app = appSys.lookup_app(desktopId);
+            if (!app) continue;
+            const fileName = plainName(desktopId.replace(/\.desktop$/, ""));
+            if (fileName.includes(wanted) || plainName(app.get_name()).includes(wanted)) {
+                return app;
+            }
+        }
     }
     return null;
 }
@@ -70,4 +111,13 @@ function tooltipLines(tooltip) {
         .filter((line) => line.length > 0);
 }
 
-module.exports = { findApp, appName, makeAppIcon, makeIconFromName, tooltipLines };
+// Label for the context menu: the display name, followed by the id when
+// it differs, because the hidden-icons list in the settings uses ids.
+function menuLabel(name, id) {
+    return sameName(name, id) ? name : name + "  (" + id + ")";
+}
+
+module.exports = {
+    findApp, appName, makeAppIcon, makeIconFromName, tooltipLines,
+    plainName, sameName, menuLabel
+};

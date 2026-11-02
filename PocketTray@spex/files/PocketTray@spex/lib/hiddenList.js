@@ -55,6 +55,15 @@ class HiddenList {
         return (this._entries || []).some((entry) => entry && normalizeId(entry.name) === wanted);
     }
 
+    // Position of the icon in the list, for sorting the pocket; icons not in
+    // the list come last.
+    position(id) {
+        const wanted = normalizeId(id);
+        const entries = this._entries || [];
+        const index = entries.findIndex((entry) => entry && normalizeId(entry.name) === wanted);
+        return index >= 0 ? index : entries.length;
+    }
+
     // Moves an icon into the pocket (hidden = true) or back to the panel.
     setHidden(id, hidden) {
         const wanted = normalizeId(id);

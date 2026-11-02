@@ -25,7 +25,7 @@
         "section-appearance": {
             "type": "section",
             "title": "Appearance",
-            "keys": ["pocket-layout"]
+            "keys": ["pocket-layout", "pocket-order"]
         },
         "section-position-icon": {
             "type": "section",
@@ -66,7 +66,7 @@
         "step": 50,
         "units": "ms",
         "description": "Hover delay before opening",
-        "tooltip": "Only used when the pocket opens on hover."
+        "dependency": "open-trigger=hover"
     },
     "close-delay": {
         "type": "scale",
@@ -76,7 +76,7 @@
         "step": 50,
         "units": "ms",
         "description": "Delay before closing after the mouse left",
-        "tooltip": "Only used when the pocket opens on hover."
+        "dependency": "open-trigger=hover"
     },
     "pocket-shortcut": {
         "type": "keybinding",
@@ -88,11 +88,22 @@
         "type": "combobox",
         "default": "icons",
         "description": "Pocket layout",
-        "tooltip": "Names shows the application name next to each icon. With status text, the name is followed by the current tooltip, so all states can be read at a glance. Legacy X11 icons have no tooltip.",
+        "tooltip": "With names, the pocket shows one row per icon with the application name. With status text, the current tooltip follows the name, so all states can be read at a glance. Legacy X11 icons have no tooltip.",
         "options": {
             "Icons only": "icons",
             "Icons and application name": "names",
             "Icons with status text (incl. name)": "status"
+        }
+    },
+    "pocket-order": {
+        "type": "combobox",
+        "default": "appearance",
+        "description": "Order of the icons in the pocket",
+        "tooltip": "Alphabetical sorts by application name. List order follows the list of hidden icons on the Icons tab.",
+        "options": {
+            "Order of appearance": "appearance",
+            "Alphabetical": "name",
+            "List order": "list"
         }
     },
     "pocket-position": {

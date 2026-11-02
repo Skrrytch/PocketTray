@@ -10,14 +10,14 @@
 //  - before a click reaches the application, host.onIconActivated() lets
 //    the pocket close, so its modal grab can't block the application's menu
 //  - a new picture or label is reported as activity, host.onIconActivity()
-//
-//  - in the pocket's status layout, a name and status text are shown next
-//    to the icon (setNameVisible())
+//  - in the pocket's name rows, the name (and in the status layout the
+//    tooltip text) is shown next to the icon (setNameVisible())
 //
 // Host interface (implemented by XAppHost):
 //   host.orientation, host.getPanelIconSize(type), host.isVertical()
 //   host.onIconChanged(icon), host.onIconActivated(icon), host.onIconActivity(icon)
 //   host.statusTexts(icon) -> { name, status }
+//   host.statusSlotSize() -> width of the icon slot in name rows
 
 // Changes within this time after an icon appeared or was refreshed are not
 // reported as activity: setting the icon size makes some applications (and
@@ -133,8 +133,8 @@ class XAppStatusIcon {
         this.actor.add_actor(this.icon_holder);
         this.actor.add_actor(this.label);
 
-        // Name and status text for the pocket's status layout: one line,
-        // "Name - status" (see _updateRowText)
+        // Text of the pocket's name rows: one line, "Name - status"
+        // (see _updateRowText)
         this._showsNames = false;
         this._rowLabel = new St.Label({ visible: false, y_align: Clutter.ActorAlign.CENTER });
         this.actor.add_actor(this._rowLabel);
@@ -242,13 +242,15 @@ class XAppStatusIcon {
     }
 
     // In the name rows the icon sits in a square slot of fixed size, so the
-    // text starts in the same column and row for every application.
+    // text starts in the same column and row for every application - also
+    // when the application shows no picture at the moment.
     _updateIconSlot() {
         const slot = this._showsNames ? this._host.statusSlotSize() : -1;
         this.icon_holder.set_width(slot);
         this.icon_holder.set_height(slot);
         this.icon_holder.set_x_align(Clutter.ActorAlign.CENTER);
         this.icon_holder.set_y_align(Clutter.ActorAlign.CENTER);
+        this.icon_holder.visible = !!this.icon_holder.child || this._showsNames;
     }
 
     // "Name - status" on one line, the name in bold. Markup is escaped so
@@ -264,8 +266,10 @@ class XAppStatusIcon {
     }
 
     setIconName(iconName) {
+        this.icon_loader_handle = null;   // an image still loading is outdated now
         if (!iconName || !iconName.trim()) {
-            this.icon_holder.hide();
+            this.icon_holder.child = null;
+            this._updateIconSlot();
             return;
         }
 
@@ -289,7 +293,7 @@ class XAppStatusIcon {
         }
 
         this.icon_holder.child = new St.Icon({ icon_type: type, icon_size: this.iconSize, icon_name: iconName });
-        this.icon_holder.show();
+        this._updateIconSlot();
     }
 
     _onImageLoaded(cache, handle, actor) {
@@ -297,7 +301,7 @@ class XAppStatusIcon {
             return;   // a newer image was requested meanwhile, or destroyed
         }
         this.icon_holder.child = actor;
-        this.icon_holder.show();
+        this._updateIconSlot();
     }
 
     setTooltipText(tooltipText) {
@@ -320,7 +324,7 @@ class XAppStatusIcon {
 
     setLabel(label) {
         this.label.set_text(label || "");
-        // The status layout has its own text; the panel label would add a second one
+        // Name rows have their own text; the panel label would add a second one
         this.label.visible = !this._showsNames && !this._host.isVertical() && !!label && label.length > 0;
     }
 
