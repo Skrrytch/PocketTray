@@ -1,0 +1,54 @@
+{
+    "head-general": {
+        "type": "header",
+        "description": "Pocket behaviour"
+    },
+    "open-trigger": {
+        "type": "combobox",
+        "default": "click",
+        "description": "Open the pocket on",
+        "tooltip": "Hover opens the pocket when the mouse rests on the pocket button; click needs a click.",
+        "options": {
+            "Click": "click",
+            "Hover": "hover"
+        }
+    },
+    "hover-delay": {
+        "type": "scale",
+        "default": 300,
+        "min": 0,
+        "max": 1500,
+        "step": 50,
+        "units": "ms",
+        "description": "Hover delay before opening",
+        "tooltip": "Only used when the pocket opens on hover."
+    },
+    "close-delay": {
+        "type": "scale",
+        "default": 500,
+        "min": 100,
+        "max": 3000,
+        "step": 50,
+        "units": "ms",
+        "description": "Delay before closing after the mouse left",
+        "tooltip": "Only used when the pocket opens on hover."
+    },
+    "head-list": {
+        "type": "header",
+        "description": "Hidden icons"
+    },
+    "hidden-apps": {
+        "type": "list",
+        "description": "Programs to move into the pocket",
+        "tooltip": "Use the icon's role/WM_CLASS (case-insensitive), e.g. dropbox or steam. Open Looking Glass (Alt+F2, lg) > Log and look for 'PocketTray: icon role' to see the names.",
+        "columns": [
+            {
+                "id": "name",
+                "title": "Program (role / WM_CLASS)",
+                "type": "string",
+                "default": ""
+            }
+        ],
+        "default": []
+    }
+}

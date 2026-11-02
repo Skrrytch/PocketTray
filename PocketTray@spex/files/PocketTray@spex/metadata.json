@@ -1,0 +1,10 @@
+{
+    "uuid": "PocketTray@spex",
+    "name": "PocketTray",
+    "description": "System tray with a hidden overflow pocket. Icons on your list are moved into a pocket that opens on hover or click.",
+    "version": "0.1.0",
+    "role": "tray",
+    "icon": "cs-applets",
+    "max-instances": 1,
+    "author": "spex"
+}

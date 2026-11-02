@@ -1,0 +1,9 @@
+# Editor / OS
+*~
+*.swp
+.idea/
+.vscode/
+.DS_Store
+
+# Compiled translations
+*.mo
