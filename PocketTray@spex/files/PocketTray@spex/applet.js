@@ -4,6 +4,8 @@
 // TODO milestone 2: same split for XApp/SNI icons (xapp-status@cinnamon.org).
 
 const St = imports.gi.St;
+const Gio = imports.gi.Gio;
+const Gtk = imports.gi.Gtk;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Meta = imports.gi.Meta;
@@ -28,6 +30,18 @@ const KNOWN_TRAY_APPLETS = [
     "systray@cinnamon.org",
     "collapsible-systray@feuerfuchs.eu"
 ];
+// Bundled pocket icons (icons/pockettray-<key>-symbolic.svg). All of them
+// are drawn for a bottom panel; directional ones get rotated to point to
+// where the pocket opens.
+const POCKET_ICONS = {
+    arrow:  { directional: true,  flipWhenOpen: true  },
+    drawer: { directional: true,  flipWhenOpen: false },
+    box:    { directional: true,  flipWhenOpen: false },
+    pocket: { directional: false, flipWhenOpen: false },
+    dots:   { directional: false, flipWhenOpen: false },
+    grid:   { directional: false, flipWhenOpen: false }
+};
+
 const APPLET_DIRS = [
     GLib.get_home_dir() + "/.local/share/cinnamon/applets",
     "/usr/share/cinnamon/applets"
@@ -65,6 +79,13 @@ class PocketTrayApplet extends Applet.Applet {
         this.settings.bind("open-trigger", "openTrigger");
         this.settings.bind("hover-delay", "hoverDelay");
         this.settings.bind("close-delay", "closeDelay");
+        this.pocketIcon = "theme";
+        this.customIcon = "";
+        this.settings.bind("pocket-icon", "pocketIcon", () => this._updateToggleIcon());
+        this.settings.bind("custom-icon", "customIcon", () => this._updateToggleIcon());
+
+        // Make the bundled SVGs available as themed (recolourable) icons.
+        Gtk.IconTheme.get_default().append_search_path(metadata.path + "/icons");
 
         // --- Main box: icons that stay permanently visible ---------------
         this.button_box = new St.BoxLayout({ vertical: this._isVertical() });
@@ -80,11 +101,12 @@ class PocketTrayApplet extends Applet.Applet {
             visible: false
         });
         this.pocket_toggle_icon = new St.Icon({
-            icon_name: this._toggleIconName(false),
             icon_type: St.IconType.SYMBOLIC,
             icon_size: this.getPanelIconSize(St.IconType.SYMBOLIC)
         });
+        this.pocket_toggle_icon.set_pivot_point(0.5, 0.5);  // rotate around centre
         this.pocket_toggle.set_child(this.pocket_toggle_icon);
+        this._updateToggleIcon();
         this.pocket_toggle.connect('clicked', () => this._onToggleClicked());
         this.pocket_toggle.connect('enter-event', () => this._onToggleEnter());
         this.pocket_toggle.connect('leave-event', () => this._onPocketLeave());
@@ -98,7 +120,7 @@ class PocketTrayApplet extends Applet.Applet {
         this.menu.sourceActor = this.pocket_toggle;
         this.menuManager.addMenu(this.menu);
         this.menu.connect('open-state-changed', (menu, open) => {
-            this.pocket_toggle_icon.set_icon_name(this._toggleIconName(open));
+            this._updateToggleIcon();
             this.pocket_toggle.change_style_pseudo_class("checked", open);
         });
         this.menu.actor.connect('enter-event', () => this._cancelHoverClose());
@@ -124,6 +146,45 @@ class PocketTrayApplet extends Applet.Applet {
             case St.Side.LEFT:   return open ? "pan-start-symbolic" : "pan-end-symbolic";
             default:             return open ? "pan-end-symbolic"   : "pan-start-symbolic";
         }
+    }
+
+    // Rotation that turns an upward-pointing icon towards the pocket.
+    _openDirectionAngle() {
+        switch (this.orientation) {
+            case St.Side.TOP:   return 180;   // pocket opens downwards
+            case St.Side.LEFT:  return 90;    // ... to the right
+            case St.Side.RIGHT: return 270;   // ... to the left
+            default:            return 0;     // bottom panel: upwards
+        }
+    }
+
+    _updateToggleIcon() {
+        const icon = this.pocket_toggle_icon;
+        if (!icon) return;  // settings callback before construction finished
+
+        const open = this.menu ? this.menu.isOpen : false;
+        let angle = 0;
+
+        icon.set_icon_size(this.getPanelIconSize(St.IconType.SYMBOLIC));
+
+        if (this.pocketIcon === "custom" && this.customIcon) {
+            // iconfilechooser gives either an absolute path or an icon name
+            if (this.customIcon.startsWith("/")) {
+                icon.set_gicon(new Gio.FileIcon({ file: Gio.File.new_for_path(this.customIcon) }));
+            } else {
+                icon.set_icon_name(this.customIcon);
+            }
+        } else if (POCKET_ICONS[this.pocketIcon]) {
+            const def = POCKET_ICONS[this.pocketIcon];
+            icon.set_icon_name("pockettray-" + this.pocketIcon + "-symbolic");
+            if (def.directional) angle = this._openDirectionAngle();
+            if (def.flipWhenOpen && open) angle += 180;
+        } else {
+            // "theme" (default) or custom without a file: theme arrow
+            icon.set_icon_name(this._toggleIconName(open));
+        }
+
+        icon.rotation_angle_z = angle % 360;
     }
 
     _isHidden(role) {
@@ -200,7 +261,7 @@ class PocketTrayApplet extends Applet.Applet {
         this.orientation = neworientation;
         this.button_box.set_vertical(this._isVertical());
         this.pocket_box.set_vertical(this._isVertical());
-        this.pocket_toggle_icon.set_icon_name(this._toggleIconName(this.menu.isOpen));
+        this._updateToggleIcon();
         this.update_na_tray_orientation();
     }
 
@@ -390,6 +451,7 @@ class PocketTrayApplet extends Applet.Applet {
 
     resizeIcons() {
         this.icon_size = this.getPanelIconSize() * global.ui_scale;
+        this._updateToggleIcon();
         Main.statusIconDispatcher.redisplay();
     }
 

@@ -33,6 +33,33 @@
         "description": "Delay before closing after the mouse left",
         "tooltip": "Only used when the pocket opens on hover."
     },
+    "head-icon": {
+        "type": "header",
+        "description": "Pocket button"
+    },
+    "pocket-icon": {
+        "type": "combobox",
+        "default": "theme",
+        "description": "Icon of the pocket button",
+        "tooltip": "Arrows and boxes turn towards the side where the pocket opens.",
+        "options": {
+            "Arrow from icon theme": "theme",
+            "PocketTray arrow": "arrow",
+            "Drawer": "drawer",
+            "Box with arrow": "box",
+            "Pocket": "pocket",
+            "Three dots": "dots",
+            "Grid": "grid",
+            "Custom icon": "custom"
+        }
+    },
+    "custom-icon": {
+        "type": "iconfilechooser",
+        "default": "",
+        "description": "Custom icon",
+        "tooltip": "An icon name from your theme or an image file. Not rotated.",
+        "dependency": "pocket-icon=custom"
+    },
     "head-list": {
         "type": "header",
         "description": "Hidden icons"

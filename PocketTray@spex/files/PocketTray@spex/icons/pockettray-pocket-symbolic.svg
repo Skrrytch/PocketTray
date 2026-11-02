@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Hosentasche: Umriss mit spitzem Boden -->
+  <path d="M 6 6 L 26 6 L 26 20 L 16 27 L 6 20 Z M 9 9 L 9 18.4 L 16 23.3 L 23 18.4 L 23 9 Z" fill="currentColor" fill-rule="evenodd" />
+  <!-- Ziernaht -->
+  <path d="M 11 12 L 21 12 L 21 13.5 L 11 13.5 Z" fill="currentColor" />
+</svg>
