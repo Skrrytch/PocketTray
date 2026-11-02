@@ -9,10 +9,16 @@
 //    process name for unnamed StatusNotifierItems (resolved asynchronously)
 //  - before a click reaches the application, host.onIconActivated() lets
 //    the pocket close, so its modal grab can't block the application's menu
+//  - a new picture or label is reported as activity, host.onIconActivity()
 //
 // Host interface (implemented by XAppHost):
 //   host.orientation, host.getPanelIconSize(type), host.isVertical()
-//   host.onIconChanged(icon), host.onIconActivated(icon)
+//   host.onIconChanged(icon), host.onIconActivated(icon), host.onIconActivity(icon)
+
+// Changes within this time after an icon appeared or was refreshed are not
+// reported as activity: setting the icon size makes some applications (and
+// xapp-sn-watcher) send a new picture right away.
+const ACTIVITY_GRACE_MS = 5000;
 
 const Cinnamon = imports.gi.Cinnamon;
 const St = imports.gi.St;
@@ -102,6 +108,7 @@ class XAppStatusIcon {
         // Unnamed StatusNotifierItem: id becomes the process name
         this.anonymous = SNI_NAME.test(proxy.name || "");
         this._cancellable = new Gio.Cancellable();
+        this._quietUntil = 0;
         this._resolveProcessName();
         this.icon_loader_handle = null;
 
@@ -141,6 +148,11 @@ class XAppStatusIcon {
         if ('IconName' in prop_names) this.setIconName(proxy.icon_name);
         if ('TooltipText' in prop_names) this.setTooltipText(proxy.tooltip_text);
         if ('Label' in prop_names) this.setLabel(proxy.label);
+        // A new picture or label usually means news (message, running job).
+        // Tooltip changes don't count: they are mostly ongoing status text.
+        if (('IconName' in prop_names || 'Label' in prop_names) && Date.now() > this._quietUntil) {
+            this._host.onIconActivity(this);
+        }
         if ('Visible' in prop_names) {
             this.setVisible(proxy.visible);
             this._host.onIconChanged(this);
@@ -183,6 +195,7 @@ class XAppStatusIcon {
     }
 
     refresh() {
+        this._quietUntil = Date.now() + ACTIVITY_GRACE_MS;
         this.setIconName(this.proxy.icon_name);
         this.setLabel(this.proxy.label);
         this.setTooltipText(this.proxy.tooltip_text);

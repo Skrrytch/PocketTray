@@ -102,6 +102,23 @@
         ],
         "default": []
     },
+    "surface-on-change": {
+        "type": "switch",
+        "default": false,
+        "description": "Show pocket icons in the panel while they change",
+        "tooltip": "When an application in the pocket changes its icon (for example a new message or a running backup), the icon appears in the panel for a while. Clicking it puts it back. Legacy X11 icons can't report changes."
+    },
+    "surface-duration": {
+        "type": "scale",
+        "default": 60,
+        "min": 5,
+        "max": 900,
+        "step": 5,
+        "units": "s",
+        "description": "How long such an icon stays in the panel",
+        "tooltip": "Every further change starts this time again.",
+        "dependency": "surface-on-change"
+    },
     "known-apps": {
         "type": "generic",
         "default": []

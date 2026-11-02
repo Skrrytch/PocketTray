@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: PocketTray@spex 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/linuxmint/cinnamon-spices-applets/"
 "issues\n"
-"POT-Creation-Date: 2026-11-02 21:16+0100\n"
+"POT-Creation-Date: 2026-11-02 21:55+0100\n"
 "PO-Revision-Date: 2026-11-02 20:00+0100\n"
 "Last-Translator: Bert Speckels <skrrytch@speckels.net>\n"
 "Language-Team: German\n"
@@ -17,24 +17,24 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/iconMenu.js:113
+#: lib/iconMenu.js:110
 msgid "Show in panel:"
 msgstr "In der Leiste zeigen:"
 
-#: lib/iconMenu.js:113
+#: lib/iconMenu.js:110
 msgid "No tray icons"
 msgstr "Keine Tray-Icons"
 
 #. settings-schema.json->hide-new-icons->description
-#: lib/iconMenu.js:122
+#: lib/iconMenu.js:119
 msgid "Put new icons into the pocket"
 msgstr "Neue Icons in die Tasche stecken"
 
-#: lib/rivalGuard.js:63
+#: lib/rivalGuard.js:60
 msgid "PocketTray has been removed from the panel"
 msgstr "PocketTray wurde aus der Leiste entfernt"
 
-#: lib/rivalGuard.js:64
+#: lib/rivalGuard.js:61
 #, javascript-format
 msgid ""
 "PocketTray replaces these applets, which already show tray icons: %s. "
@@ -194,7 +194,9 @@ msgstr "Versteckte Icons"
 msgid ""
 "Icons of applications PocketTray has not seen before go straight into the "
 "pocket. Icons it already knows keep their place."
-msgstr "Icons von Programmen, die PocketTray noch nicht kennt, landen direkt in der Tasche. Bekannte Icons behalten ihren Platz."
+msgstr ""
+"Icons von Programmen, die PocketTray noch nicht kennt, landen direkt in der "
+"Tasche. Bekannte Icons behalten ihren Platz."
 
 #. settings-schema.json->hidden-apps->description
 msgid "Programs to move into the pocket"
@@ -214,3 +216,26 @@ msgstr ""
 #. settings-schema.json->hidden-apps->columns->title
 msgid "Program or icon name"
 msgstr "Programm- oder Icon-Name"
+
+#. settings-schema.json->surface-on-change->description
+msgid "Show pocket icons in the panel while they change"
+msgstr "Icons aus der Tasche bei Änderungen in der Leiste zeigen"
+
+#. settings-schema.json->surface-on-change->tooltip
+msgid ""
+"When an application in the pocket changes its icon (for example a new "
+"message or a running backup), the icon appears in the panel for a while. "
+"Clicking it puts it back. Legacy X11 icons can't report changes."
+msgstr "Ändert ein Programm in der Tasche sein Icon (zum Beispiel bei einer neuen Nachricht oder einem laufenden Backup), erscheint das Icon eine Zeit lang in der Leiste. Ein Klick darauf legt es zurück. Alte X11-Icons können keine Änderungen melden."
+
+#. settings-schema.json->surface-duration->units
+msgid "s"
+msgstr "s"
+
+#. settings-schema.json->surface-duration->description
+msgid "How long such an icon stays in the panel"
+msgstr "So lange bleibt ein solches Icon in der Leiste"
+
+#. settings-schema.json->surface-duration->tooltip
+msgid "Every further change starts this time again."
+msgstr "Jede weitere Änderung startet diese Zeit neu."

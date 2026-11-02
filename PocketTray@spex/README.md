@@ -36,6 +36,7 @@ The pocket button only appears when the pocket holds at least one icon.
 | Icon of the pocket button | Three triangles (default), triangles upside down, four circles, grid, three dots, pocket, drawer, arrows, or a custom icon |
 | Put new icons into the pocket | Icons of applications PocketTray has never seen go straight into the pocket; also in the context menu |
 | Hidden icons | The list behind the switches in the context menu; can be edited by hand |
+| Show pocket icons in the panel while they change | Off by default. When a status icon in the pocket changes its picture or label (new message, running backup), it appears in the panel for a configurable time; a click puts it back. The hidden list is not changed. |
 
 ## How icons are identified
 

@@ -100,6 +100,10 @@ class PocketTrayApplet extends Applet.Applet {
         bind("pocket-icon", "pocketIcon", () => this.pocketButton.update());
         bind("custom-icon", "customIcon", () => this.pocketButton.update());
         bind("pocket-shortcut", "pocketShortcut", () => this._updateShortcut());
+        bind("surface-on-change", "surfaceOnChange", () => {
+            if (!this.config.surfaceOnChange) this._xapp.endSurfacing();
+        });
+        bind("surface-duration", "surfaceDuration");
     }
 
     // ------------------------------------------------------------------
@@ -115,11 +119,13 @@ class PocketTrayApplet extends Applet.Applet {
     // options.atStart:       insert as first icon instead of last
     // options.provisionalId: the id is not final yet (see XAppStatusIcon);
     //                        don't record it as a known icon
-    placeIcon(actor, id, { atStart = false, provisionalId = false } = {}) {
+    // options.surfaced:      belongs into the pocket, but is shown in the
+    //                        panel for a while because it changed (XAppHost)
+    placeIcon(actor, id, { atStart = false, provisionalId = false, surfaced = false } = {}) {
         if (!provisionalId) {
             this.hiddenList.noticeIcon(id);
         }
-        const toPocket = this.hiddenList.has(id);
+        const toPocket = this.hiddenList.has(id) && !surfaced;
         const target = toPocket ? this.pocket.box : this.panelBox;
         const parent = actor.get_parent();
 

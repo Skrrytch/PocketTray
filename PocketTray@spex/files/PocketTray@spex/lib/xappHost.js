@@ -10,18 +10,30 @@
 // Unlike X11 icons, these icons are drawn by PocketTray itself
 // (XAppStatusIcon), so they can be moved between panel and pocket directly.
 //
+// Surfacing (setting "surface-on-change", off by default): when an icon that
+// lives in the pocket reports activity, it is shown in the panel for
+// "surface-duration" seconds; every further activity restarts the time, a
+// click ends it. The hidden list itself is never changed.
+//
 // Owner interface (implemented by PocketTrayApplet):
 //   owner.panel, owner.orientation, owner.getPanelIconSize(), owner.isVertical()
-//   owner.panelBox, owner.pocket
+//   owner.panelBox, owner.pocket, owner.hiddenList
+//   owner.config.surfaceOnChange, owner.config.surfaceDuration
 //   owner.placeIcon(actor, id, options) -> true if it went into the pocket
 //   owner.iconsChanged()
 
 const Gtk = imports.gi.Gtk;
+const GLib = imports.gi.GLib;
 const XApp = imports.gi.XApp;
 const Main = imports.ui.main;
+const Mainloop = imports.mainloop;
 const SignalManager = imports.misc.signalManager;
 const { XAppStatusIcon, RecorderIcon } = require('./lib/xappStatusIcon');
 const { makeIconFromName } = require('./lib/iconMenu');
+
+// After a click on a surfaced icon it goes back into the pocket, slightly
+// delayed so the application can open its menu at the icon's position first.
+const SURFACE_END_AFTER_CLICK_MS = 1000;
 
 class XAppHost {
     constructor(owner) {
@@ -34,6 +46,9 @@ class XAppHost {
         // by _key(proxy).
         this._proxies = new Map();
         this._icons = new Map();
+        // key -> timeout id, for icons currently shown in the panel because
+        // of activity although they belong into the pocket
+        this._surfaced = new Map();
     }
 
     // --- Facade for XAppStatusIcon / RecorderIcon ----------------------
@@ -71,6 +86,7 @@ class XAppHost {
     // Safe to call more than once.
     stop() {
         this._signals.disconnectAllSignals();
+        this._clearSurfacing();
         for (const icon of this._icons.values()) {
             icon.destroy();
         }
@@ -159,6 +175,30 @@ class XAppHost {
     // A click is about to be forwarded to the application.
     onIconActivated(icon) {
         this._owner.pocket.closeIfContains(icon.actor);
+        const key = this._key(icon.proxy);
+        if (this._surfaced.has(key)) {
+            this._surface(key, SURFACE_END_AFTER_CLICK_MS);
+        }
+    }
+
+    // The icon got a new picture or label.
+    onIconActivity(icon) {
+        const key = this._key(icon.proxy);
+        if (!this._owner.config.surfaceOnChange || this._icons.get(key) !== icon) return;
+        if (!this._owner.hiddenList.has(icon.id)) return;   // already in the panel
+
+        if (!this._surfaced.has(key)) {
+            global.log("PocketTray: XApp icon '" + icon.id + "' changed, showing it in the panel");
+        }
+        this._surface(key, this._owner.config.surfaceDuration * 1000);
+        this._place(icon);
+        this._owner.iconsChanged();
+    }
+
+    // Ends all surfacing, e.g. when the setting was switched off.
+    endSurfacing() {
+        this._clearSurfacing();
+        this.sync();
     }
 
     // --- Internals -----------------------------------------------------
@@ -174,6 +214,7 @@ class XAppHost {
     _onProxyRemoved(monitor, proxy) {
         const key = this._key(proxy);
         this._proxies.delete(key);
+        this._unsurface(key);
         const icon = this._icons.get(key);
         if (icon) {
             global.log("PocketTray: removing XApp icon '" + icon.id + "'");
@@ -188,9 +229,41 @@ class XAppHost {
         return Main.systrayManager.getRoles().indexOf((proxy.name || "").toLowerCase()) !== -1;
     }
 
+    // (Re)starts the time an icon stays surfaced in the panel.
+    _surface(key, ms) {
+        this._unsurface(key);
+        const id = Mainloop.timeout_add(ms, () => {
+            this._surfaced.delete(key);
+            const icon = this._icons.get(key);
+            if (icon) {
+                this._place(icon);
+                this._owner.iconsChanged();
+            }
+            return GLib.SOURCE_REMOVE;
+        });
+        this._surfaced.set(key, id);
+    }
+
+    _unsurface(key) {
+        const id = this._surfaced.get(key);
+        if (id) {
+            Mainloop.source_remove(id);
+            this._surfaced.delete(key);
+        }
+    }
+
+    _clearSurfacing() {
+        for (const key of [...this._surfaced.keys()]) {
+            this._unsurface(key);
+        }
+    }
+
     _place(icon) {
         const parent = icon.actor.get_parent();
-        const toPocket = this._owner.placeIcon(icon.actor, icon.id, { provisionalId: icon.idIsProvisional });
+        const toPocket = this._owner.placeIcon(icon.actor, icon.id, {
+            provisionalId: icon.idIsProvisional,
+            surfaced: this._surfaced.has(this._key(icon.proxy))
+        });
         if (icon.actor.get_parent() !== parent) {
             global.log("PocketTray: XApp icon '" + icon.id + "' -> " + (toPocket ? "pocket" : "panel"));
         }
